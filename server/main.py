@@ -1,8 +1,12 @@
+import json
+import asyncio
 from typing import List, Literal
+import uuid
 
-from fastapi import APIRouter, Depends, FastAPI, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, UploadFile, BackgroundTasks
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
+import redis.asyncio as redis
 
 import api_messages
 from attachments.base import BaseAttachments
@@ -13,6 +17,8 @@ from global_config import AuthType, GlobalConfig, GlobalConfigResponseModel
 from helpers import replace_base_href
 from notes.base import BaseNotes
 from notes.models import Note, NoteCreate, NoteUpdate, SearchResult
+from tasks.models import TaskCreate
+from tasks.llm_chat import Chat
 
 global_config = GlobalConfig()
 auth: BaseAuth = global_config.load_auth()
@@ -26,6 +32,9 @@ app = FastAPI(
 )
 replace_base_href("client/dist/index.html", global_config.path_prefix)
 
+red = redis.Redis(host='192.168.7.183', db=13)
+
+chat_func: Chat = None
 
 # region UI
 @router.get("/", include_in_schema=False)
@@ -33,6 +42,7 @@ replace_base_href("client/dist/index.html", global_config.path_prefix)
 @router.get("/search", include_in_schema=False)
 @router.get("/new", include_in_schema=False)
 @router.get("/note/{title}", include_in_schema=False)
+@router.get("/chat", include_in_schema=False)
 def root(title: str = ""):
     with open("client/dist/index.html", "r", encoding="utf-8") as f:
         html = f.read()
@@ -48,6 +58,8 @@ if global_config.auth_type not in [AuthType.NONE, AuthType.READ_ONLY]:
     @router.post("/api/token", response_model=Token)
     def token(data: Login):
         try:
+            user_id = auth.get_user_hash()
+            chat_func = Chat(user_id=user_id)
             return auth.login(data)
         except ValueError:
             raise HTTPException(
@@ -158,6 +170,54 @@ def search(
         sort = "last_modified"
     return note_storage.search(term, sort=sort, order=order, limit=limit)
 
+from fastapi.responses import StreamingResponse
+import time
+
+
+def sse_event_generator():
+    while True:
+        # SSE 格式，每条数据必须以 "\n\n" 结尾
+        yield f"data: 通知来了 - {time.strftime('%X')}\n\n"
+        time.sleep(3)
+
+async def run_background_task(task_id: str, user_id: str, query: str):
+    resp = await chat_func.astream_chat(query)
+    await red.publish(
+        f"user:{user_id}",
+        json.dumps({"status": "completed", "task_id": task_id, "resp": resp})
+    )
+    red.close()
+    
+@router.post(
+        "/api/task",
+        dependencies=auth_deps,
+    )
+def create_task(
+    task: TaskCreate,
+    background_tasks: BackgroundTasks
+    ):
+    task_id = f"task_{auth.get_user_hash()}_{uuid.uuid4()}"
+    background_tasks.add_task(run_background_task, task_id, auth.get_user_hash())
+    return {"task_id": task_id, "user_id": auth.get_user_hash()}
+    # return StreamingResponse(sse_event_generator(), media_type="text/event-stream")
+
+
+@app.get("/api/sse")
+async def sse_stream():
+    pubsub = red.pubsub()
+    await pubsub.subscribe(f"user:{auth.get_user_hash()}")
+
+    async def event_generator():
+        try:
+            while True:
+                message = await pubsub.get_message(ignore_subscribe_messages=True)
+                if message:
+                    yield f"data: {message.decode()}\n\n"
+        finally:
+            await pubsub.unsubscribe(f"user:{auth.get_user_hash()}")
+            red.close()
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 @router.get(
     "/api/tags",

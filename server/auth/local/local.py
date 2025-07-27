@@ -1,6 +1,7 @@
 import secrets
 from base64 import b32encode
 from datetime import datetime, timedelta
+import hashlib
 
 from fastapi import Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordBearer
@@ -88,6 +89,12 @@ class LocalAuth(BaseAuth):
                 detail="Invalid authentication credentials",
                 headers={"WWW-Authenticate": "Bearer"},
             )
+        
+    def get_user_hash(self) -> int:
+        encoded_str = self.username.encode()
+        hasded_str = hashlib.sha256(encoded_str)
+        return int(hasded_str.hexdigest(), 16)
+        
 
     def _validate_token(self, token: str) -> bool:
         if token is None:

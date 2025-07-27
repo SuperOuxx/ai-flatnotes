@@ -13,3 +13,7 @@ class BaseAuth(ABC):
     def authenticate(self, token: str) -> bool:
         """Authenticate a user."""
         pass
+
+    @abstractmethod
+    def get_user_hash(self) -> int:
+        pass

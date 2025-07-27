@@ -1,6 +1,6 @@
 import * as constants from "./constants.js";
 
-import { Note, SearchResult } from "./classes.js";
+import { Note, SearchResult, TaskResult } from "./classes.js";
 
 import axios from "axios";
 import { getStoredToken } from "./tokenStorage.js";
@@ -141,6 +141,25 @@ export async function createAttachment(file) {
       },
     });
     return response.data;
+  } catch (response) {
+    return Promise.reject(response);
+  }
+}
+
+// 创建任务, 如结合多种工具与AI对话
+export async function createTask(query, simple_chat,
+    chat_with_notes,
+    chat_with_knowledge,
+    chat_with_web) {
+  try {
+    const response = await api.post("api/task", {
+      query: query,
+      simple_chat: simple_chat,
+      chat_with_notes: chat_with_notes,
+      chat_with_knowledge: chat_with_knowledge,
+      chat_with_web: chat_with_web
+    });
+    return new TaskResult(response.data);
   } catch (response) {
     return Promise.reject(response);
   }

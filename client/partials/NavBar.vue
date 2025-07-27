@@ -28,6 +28,7 @@ import {
   mdilMonitor,
   mdilNoteMultiple,
   mdilPlusCircle,
+  mdilMessageProcessing,
 } from "@mdi/light-js";
 import { computed, ref } from "vue";
 import { RouterLink, useRouter } from "vue-router";
@@ -63,6 +64,18 @@ const menuItems = [
     command: () =>
       router.push({
         name: "search",
+        query: {
+          [params.searchTerm]: "*",
+          [params.sortBy]: searchSortOptions.title,
+        },
+      }),
+  },
+  {
+    label: "Chat",
+    icon: mdilMessageProcessing,
+    command: () =>
+      router.push({
+        name: "chat",
         query: {
           [params.searchTerm]: "*",
           [params.sortBy]: searchSortOptions.title,

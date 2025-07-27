@@ -6,3 +6,8 @@ python-jose ==3.4.0
 pyotp ==2.9.0
 qrcode ==8.0
 python-multipart ==0.0.20
+redis==6.2.0
+llama_index
+llama-index-embeddings-huggingface
+# llama-index-llms-llama-cpp
+llama-index-llms-openai-like
