@@ -27,6 +27,7 @@ const router = createRouter({
       name: "new",
       component: () => import("./views/Note.vue"),
     },
+
     {
       path: "/search",
       name: "search",
@@ -36,6 +37,11 @@ const router = createRouter({
         sortBy: Number(route.query[constants.params.sortBy]) || undefined,
       }),
     },
+    {
+      path: "/chat",
+      name: "chat",
+      component: () => import("./views/Chat.vue"),
+    }
   ],
 });
 

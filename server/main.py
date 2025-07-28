@@ -3,7 +3,7 @@ import asyncio
 from typing import List, Literal
 import uuid
 
-from fastapi import APIRouter, Depends, FastAPI, HTTPException, UploadFile, BackgroundTasks
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, UploadFile, BackgroundTasks, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 import redis.asyncio as redis
@@ -46,6 +46,8 @@ chat_func: Chat = None
 def root(title: str = ""):
     with open("client/dist/index.html", "r", encoding="utf-8") as f:
         html = f.read()
+        user_id = auth.get_user_hash()
+        chat_func = Chat(user_id=user_id)
     return HTMLResponse(content=html)
 
 
@@ -218,6 +220,41 @@ async def sse_stream():
             red.close()
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
+# Create a websocket connection
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    user_id = auth.get_user_hash()
+    chat_func = Chat(user_id=user_id)
+    # if not chat_func:
+    #     user_id = auth.get_user_hash()
+    #     chat_func = Chat(user_id=user_id)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            message_data = json.loads(data)
+            if message_data['type'] == 'get_messages':
+                messages = chat_func.chat_store()
+                await websocket.send_text(json.dumps({'type': 'message_update', 'content': messages[1:]}))
+
+            if message_data['type'] == 'new_message':
+                new_message = message_data['content']
+                resp = chat_func.astream_chat(query=new_message)
+                
+                await websocket.send_text(json.dumps({'type': 'message_update', 'content': new_message}))
+                await websocket.send_text(json.dumps({'type': 'message_update', 'content': resp}))
+                chat_func.save_this_round_msg(query=new_message, ai_resp=resp)
+
+            # if message_data['type'] == 'clear_messages':
+            #     messages_collection.delete_many({})
+            #     messages_collection.insert_one({'role': 'system', 'content': 'You are a helpful assistant'})
+            #     messages = get_messages()
+            #     await websocket.send_text(json.dumps({'type': 'message_update', 'content': messages[1:]}))
+
+    except WebSocketDisconnect:
+        print("Client disconnected")
 
 @router.get(
     "/api/tags",
