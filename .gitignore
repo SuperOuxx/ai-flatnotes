@@ -249,3 +249,4 @@ dist
 data/
 /notes/
 .aider*
+chat_store/

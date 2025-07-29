@@ -236,16 +236,18 @@ async def websocket_endpoint(websocket: WebSocket):
             data = await websocket.receive_text()
             message_data = json.loads(data)
             if message_data['type'] == 'get_messages':
-                messages = chat_func.chat_store()
-                await websocket.send_text(json.dumps({'type': 'message_update', 'content': messages[1:]}))
+                messages = chat_func.get_all_chat_history()
+                if messages:
+                    await websocket.send_text(json.dumps({'type': 'message_update', 'content': messages[1:]}))
 
             if message_data['type'] == 'new_message':
                 new_message = message_data['content']
-                resp = chat_func.astream_chat(query=new_message)
+                resp = chat_func.test_chat(new_message) # .astream_chat(query=new_message)
+                print(resp.message.content)
                 
-                await websocket.send_text(json.dumps({'type': 'message_update', 'content': new_message}))
-                await websocket.send_text(json.dumps({'type': 'message_update', 'content': resp}))
-                chat_func.save_this_round_msg(query=new_message, ai_resp=resp)
+                # await websocket.send_text(json.dumps({'type': 'message_update', 'content': new_message, "role": "user"}))
+                await websocket.send_text(json.dumps({'type': 'message_update', 'content': resp.message.content, "role": "assistant"}))
+                chat_func.save_this_round_msg(query=new_message, ai_resp=resp.message.content)
 
             # if message_data['type'] == 'clear_messages':
             #     messages_collection.delete_many({})

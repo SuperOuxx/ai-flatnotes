@@ -33,6 +33,6 @@ class ChatStore():
         persist_chat_store = self.__get_persist_chat_store()
         for msg in msg_list:
             persist_chat_store.add_message(
-                key=self.user_id, message=msg)
+                key=self.user_id, message=msg, idx=-1)
             
         persist_chat_store.persist(self.path)

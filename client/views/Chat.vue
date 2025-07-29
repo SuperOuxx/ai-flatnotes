@@ -28,7 +28,12 @@ export default {
             const data = JSON.parse(event.data);
             console.log(data);
             if (data.type === 'message_update') {
-                this.messages = data.content;
+                this.messages.push({
+                    role: data.role,
+                    content: data.content
+                });
+                // this.messages.push(data.content);
+                // this.messages = data.content;
             }
         },
         getMessages() {
@@ -38,6 +43,13 @@ export default {
             this.sendSocketMessage(newMessage);
         },
         sendSocketMessage(message) {
+            // 针对用户发送的新消息先本地添加
+            if (message.type === 'new_message') {
+                this.messages.push({
+                    role: 'user',
+                    content: message.content
+                });
+            }
             this.socket.send(JSON.stringify(message));
         },
     },

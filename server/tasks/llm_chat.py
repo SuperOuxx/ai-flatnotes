@@ -49,8 +49,8 @@ class Chat():
         self.user_id = user_id
         self.chat_store = ChatStore(user_id=self.user_id)
 
-    def test_chat(self):
-        openai.chat.completions.create()
+    def test_chat(self, query):
+        return llm.chat(messages=[ChatMessage(role="user", content=query)])
 
     async def astream_chat(self, query: str):
         msg_list = self.chat_store.get_chat_history()
