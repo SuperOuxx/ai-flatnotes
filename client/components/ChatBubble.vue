@@ -15,13 +15,13 @@
         highlight: (code, lang) => hljs.highlight(code, { language: lang }).value,
     })
 
-    const value = ref('**Hello,World**')
-    const markdownToHtml = shallowRef("")
-    markdownToHtml.value = marked(value.value)
+    // const value = ref('**Hello,World**')
+    // const markdownToHtml = shallowRef("")
+    // markdownToHtml.value = marked(value.value)
 
-    export const change = (value) => {
-    markdownToHtml.value = marked(value)
-    }
+    // export const change = (value) => {
+    // markdownToHtml.value = marked(value)
+    // }
 
 export default {
     name: 'ChatBubble',

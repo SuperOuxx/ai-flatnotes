@@ -26,14 +26,15 @@ export default {
     methods: {
         handleSocketMessage(event) {
             const data = JSON.parse(event.data);
-            console.log(data);
+            // console.log(data);
+            if (data.hasOwnProperty("msg_arr")) {
+                this.messages = data.msg_arr
+            }
             if (data.type === 'message_update') {
                 this.messages.push({
                     role: data.role,
                     content: data.content
                 });
-                // this.messages.push(data.content);
-                // this.messages = data.content;
             }
         },
         getMessages() {
@@ -41,6 +42,7 @@ export default {
                 type: 'get_messages',
             };
             this.sendSocketMessage(newMessage);
+
         },
         sendSocketMessage(message) {
             // 针对用户发送的新消息先本地添加

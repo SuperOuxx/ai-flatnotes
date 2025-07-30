@@ -238,7 +238,8 @@ async def websocket_endpoint(websocket: WebSocket):
             if message_data['type'] == 'get_messages':
                 messages = chat_func.get_all_chat_history()
                 if messages:
-                    await websocket.send_text(json.dumps({'type': 'message_update', 'content': messages[1:]}))
+                    msg_arr = [{'role': msg.role, 'content': msg.content} for msg in messages]
+                    await websocket.send_text(json.dumps({'msg_arr': msg_arr}))
 
             if message_data['type'] == 'new_message':
                 new_message = message_data['content']

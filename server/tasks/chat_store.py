@@ -5,10 +5,14 @@ from llama_index.core.memory import ChatMemoryBuffer
 from llama_index.core.llms import ChatMessage
 import os
 
+from local_path import CHAT_STORE_PATH
+
+
 
 
 # 历史对话的存储路径
-CHAT_STORE_PATH = "./chat_store/[user_id].json"
+# CHAT_STORE_PATH = "./chat_store/[user_id].json"
+
 
 class ChatStore():
     # coder_llm: LLM = Ollama(model=QWEN_2_5_CODER_7B, temperature=0)
@@ -25,6 +29,7 @@ class ChatStore():
         )
     
     def get_chat_history(self):
+        print(f"当前存储路径：{self.path}")
         persist_chat_store = self.__get_persist_chat_store()
         return persist_chat_store.get_messages(key=self.user_id)
     
