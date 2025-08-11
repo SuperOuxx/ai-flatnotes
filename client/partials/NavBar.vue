@@ -76,10 +76,10 @@ const menuItems = [
     command: () =>
       router.push({
         name: "chat",
-        query: {
-          [params.searchTerm]: "*",
-          [params.sortBy]: searchSortOptions.title,
-        },
+        // query: {
+        //   [params.searchTerm]: "*",
+        //   [params.sortBy]: searchSortOptions.title,
+        // },
       }),
   },
   {

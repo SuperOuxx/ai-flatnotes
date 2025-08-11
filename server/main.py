@@ -243,11 +243,13 @@ async def websocket_endpoint(websocket: WebSocket):
 
             if message_data['type'] == 'new_message':
                 new_message = message_data['content']
-                resp = chat_func.test_chat(new_message) # .astream_chat(query=new_message)
-                print(resp.message.content)
+                resp = chat_func.astream_chat(query=new_message) # . test_chat(new_message)
+                # await websocket.send_text(json.dumps({'type': 'message_update', 'content': resp, "role": "assistant"}))
+                # async for chunk in resp:
+                #     print(chunk)
                 
-                # await websocket.send_text(json.dumps({'type': 'message_update', 'content': new_message, "role": "user"}))
-                await websocket.send_text(json.dumps({'type': 'message_update', 'content': resp.message.content, "role": "assistant"}))
+                #     await websocket.send_text(json.dumps({'type': 'message_update', 'content': chunk, "role": "assistant"}))
+                
                 chat_func.save_this_round_msg(query=new_message, ai_resp=resp.message.content)
 
             # if message_data['type'] == 'clear_messages':

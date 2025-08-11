@@ -1,8 +1,11 @@
 
 from typing import List
 from llama_index.core.storage.chat_store import SimpleChatStore
+from llama_index.core import VectorStoreIndex, Settings, SimpleDirectoryReader
 from llama_index.core.memory import ChatMemoryBuffer
 from llama_index.core.llms import ChatMessage
+
+from llama_index.storage.chat_store.postgres import PostgresChatStore
 import os
 
 from local_path import CHAT_STORE_PATH
@@ -14,7 +17,7 @@ from local_path import CHAT_STORE_PATH
 # CHAT_STORE_PATH = "./chat_store/[user_id].json"
 
 
-class ChatStore():
+class LocalChatStore():
     # coder_llm: LLM = Ollama(model=QWEN_2_5_CODER_7B, temperature=0)
 
     def __init__(self, user_id) -> None:
@@ -29,7 +32,6 @@ class ChatStore():
         )
     
     def get_chat_history(self):
-        print(f"当前存储路径：{self.path}")
         persist_chat_store = self.__get_persist_chat_store()
         return persist_chat_store.get_messages(key=self.user_id)
     
@@ -41,3 +43,19 @@ class ChatStore():
                 key=self.user_id, message=msg, idx=-1)
             
         persist_chat_store.persist(self.path)
+
+
+class ChatStore():
+    
+    def __init__(self, user_id) -> None:
+        self.chat_store = PostgresChatStore.from_uri(
+            uri=f"""postgresql+asyncpg://postgres:{os.environ.get("FLATNOTES_PASSWORD")}@127.0.0.1:5432/postgres""",
+        )
+        self.user_id = user_id
+
+    def get_chat_history(self) -> List[ChatMessage]:
+        # VectorStoreIndex.from_vector_store()
+        return self.chat_store.get_messages(key = self.user_id)
+    
+    def save_messages(self, msg_list: List[ChatMessage]):
+        self.chat_store.set_messages(self.user_id, messages=msg_list)

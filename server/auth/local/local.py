@@ -90,10 +90,13 @@ class LocalAuth(BaseAuth):
                 headers={"WWW-Authenticate": "Bearer"},
             )
         
-    def get_user_hash(self) -> int:
-        encoded_str = self.username.encode()
-        hasded_str = hashlib.sha256(encoded_str)
-        return int(hasded_str.hexdigest(), 16)
+    # def get_user_hash(self) -> int:
+    #     encoded_str = self.username.encode()
+    #     hasded_str = hashlib.sha256(encoded_str)
+    #     return int(hasded_str.hexdigest(), 16)
+      
+    def get_user_hash(self) -> str:
+        return self.username
         
 
     def _validate_token(self, token: str) -> bool:

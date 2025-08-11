@@ -11,5 +11,8 @@ llama_index
 llama-index-embeddings-huggingface
 # llama-index-llms-llama-cpp
 llama-index-llms-openai-like
+llama-index-storage-chat-store-postgres
+llama-index-vector-stores-postgres
+llama-index-storage-docstore-postgres
 
 websockets

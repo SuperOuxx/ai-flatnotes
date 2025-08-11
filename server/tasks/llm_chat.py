@@ -3,8 +3,8 @@ from llama_index.core.base.llms.types import ChatMessage, MessageRole
 import os
 import openai
 
-# from tasks.chat_store import ChatStore
-from chat_store import ChatStore
+from tasks.chat_store import ChatStore
+# from chat_store import ChatStore
 
 API_BASE = os.environ.get("OPENAI_API_BASE")
 API_KEY = os.environ.get("OPENAI_API_KEY")
@@ -58,13 +58,13 @@ class Chat():
         if len(msg_list) > 5:
             msg_list = msg_list[-5: ]
 
-        response = llm.astream_chat(msg_list)
+        response = await llm.astream_chat(msg_list)
         async for chunk in response:
             print(chunk.delta, end="")
             yield chunk.delta
 
     def get_all_chat_history(self, need_raw_str=False):
-        print(f"当前存储路径：{self.chat_store.path}")
+        # print(f"当前存储路径：{self.chat_store.path}")
         msg_list = self.chat_store.get_chat_history()
         # 如果不需要字符串格式的数据，就返回 List[ChatMessage]，否则构造二维字符串列表
         if not need_raw_str:
