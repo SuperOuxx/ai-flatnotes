@@ -250,7 +250,21 @@ async def websocket_endpoint(websocket: WebSocket):
                 
                 #     await websocket.send_text(json.dumps({'type': 'message_update', 'content': chunk, "role": "assistant"}))
                 
-                chat_func.save_this_round_msg(query=new_message, ai_resp=resp.message.content)
+                async for chunk in resp:
+                    await websocket.send_text(json.dumps({
+                        'type': 'message_part',
+                        'content': chunk,
+                        "role": "assistant"
+                    }))
+                # 发送完成信号
+                await websocket.send_text(json.dumps({
+                    'type': 'message_complete',
+                    "role": "assistant"
+                }))
+                # 保存完整响应（需在Chat类中实现获取最终内容的方法）
+                full_response = "".join([chunk for chunk in resp])
+                chat_func.save_this_round_msg(query=new_message, ai_resp=full_response)
+                # chat_func.save_this_round_msg(query=new_message, ai_resp=resp.message.content)
 
             # if message_data['type'] == 'clear_messages':
             #     messages_collection.delete_many({})

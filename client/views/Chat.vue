@@ -30,11 +30,33 @@ export default {
             if (data.hasOwnProperty("msg_arr")) {
                 this.messages = data.msg_arr
             }
-            if (data.type === 'message_update') {
-                this.messages.push({
-                    role: data.role,
-                    content: data.content
-                });
+            // if (data.type === 'message_update') {
+            //     this.messages.push({
+            //         role: data.role,
+            //         content: data.content
+            //     });
+            // }
+            if (data.type === 'message_part') {
+                if (!this.tempStreamingMessage) {
+                    this.tempStreamingMessage = {
+                        role: data.role, 
+                        content: data.content 
+                    };
+                    // this.$set(this, 'tempStreamingMessage', { 
+                    //     role: data.role, 
+                    //     content: data.content 
+                    // });
+                } else {
+                    this.tempStreamingMessage.content += data.content;
+                }
+            } else if (data.type === 'message_complete') {
+                // 创建新对象触发响应式更新
+                this.tempStreamingMessage = {
+                    ...this.tempStreamingMessage,
+                    content: this.tempStreamingMessage.content + data.content
+                };
+                this.messages.push(this.tempStreamingMessage);
+                this.tempStreamingMessage = null;
             }
         },
         getMessages() {
@@ -61,7 +83,12 @@ export default {
 <template>
     <div class="app">
         <div class="app-content">
-            <ChatContent :messages="this.messages"/>
+            
+            <!-- 传递streamingMessage -->
+            <ChatContent 
+                :messages="messages"
+                :streaming-message="tempStreamingMessage"
+            />
             <InputRow :sendSocketMessage="this.sendSocketMessage" :messages="this.messages"/>
         </div>
     </div>

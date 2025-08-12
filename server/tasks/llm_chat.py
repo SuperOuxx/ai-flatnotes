@@ -60,7 +60,7 @@ class Chat():
 
         response = await llm.astream_chat(msg_list)
         async for chunk in response:
-            print(chunk.delta, end="")
+            # print(chunk.delta, end="")
             yield chunk.delta
 
     def get_all_chat_history(self, need_raw_str=False):

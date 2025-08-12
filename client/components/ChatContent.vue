@@ -11,6 +11,10 @@ export default {
             type: Array,
             required: true,
         },
+        streamingMessage: {  // 新增prop
+            type: Object,
+            default: null,
+        },
     },
 };
 </script>
@@ -21,6 +25,13 @@ export default {
             v-for="(message, index) in messages"
             :key="index"
             :message="message"
+        />
+
+        <!-- 新增：显示正在流式传输的消息 -->
+        <ChatBubble
+            v-if="streamingMessage"
+            :message="streamingMessage"
+            class="streaming-message"
         />
     </div>
 </template>
@@ -35,5 +46,14 @@ export default {
     width: 100%;
     margin-bottom: 10px;
     overflow: auto;
+}
+
+.streaming-message {
+    opacity: 0.8;
+    animation: blink 1s infinite;
+}
+
+@keyframes blink {
+    50% { opacity: 0.5; }
 }
 </style>
