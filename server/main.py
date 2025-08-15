@@ -6,6 +6,10 @@ import uuid
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, UploadFile, BackgroundTasks, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
+
+from sse_starlette import EventSourceResponse, ServerSentEvent
+from fastapi.middleware.cors import CORSMiddleware
+
 import redis.asyncio as redis
 
 import api_messages
@@ -30,7 +34,18 @@ app = FastAPI(
     docs_url=global_config.path_prefix + "/docs",
     openapi_url=global_config.path_prefix + "/openapi.json",
 )
+
+# 添加CORS支持
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://127.0.0.1:8080"],  # 允许的前端地址
+    allow_credentials=True,
+    allow_methods=["*"],  # 允许所有HTTP方法
+    allow_headers=["*"],  # 允许所有HTTP头
+)
+
 replace_base_href("client/dist/index.html", global_config.path_prefix)
+
 
 red = redis.Redis(host='192.168.7.183', db=13)
 
@@ -221,7 +236,6 @@ async def sse_stream():
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
-from sse_starlette import EventSourceResponse, ServerSentEvent
 
 @app.get(
     "/api/chat_stream",

@@ -30,13 +30,32 @@
 </template>
 
 <script setup>
-import CustomButton from "../components/CustomButton.vue";
-import parseMarkdown from '../components/ChatBubble.vue';
-import {nextTick, ref} from 'vue';
-import {
-  getMessages,
-  getSession,
-} from "../api.js";
+  import {nextTick, ref} from 'vue';
+  import {
+    getMessages,
+    getSession,
+  } from "../api.js";
+
+  import { marked } from 'marked';
+  import hljs from 'highlight.js'
+  import 'highlight.js/styles/foundation.css'
+
+  const render = new marked.Renderer()
+  marked.setOptions({
+      renderer: render, // 这是必填项
+      gfm: true,	// 启动类似于Github样式的Markdown语法
+      pedantic: false, // 只解析符合Markdwon定义的，不修正Markdown的错误
+      sanitize: false, // 原始输出，忽略HTML标签（关闭后，可直接渲染HTML标签）
+
+          // 高亮的语法规范
+      highlight: (code, lang) => hljs.highlight(code, { language: lang }).value,
+  });
+
+  // 创建 Markdown 渲染函数
+  const renderMarkdown = (content) => {
+    return marked(content);
+  };
+
 
 // import {ElMessage} from "element-plus";
 
@@ -58,159 +77,177 @@ import {
 //     return '<pre class="hljs"><code>' + md.utils.escapeHtml(str) + '</code></pre>';
 //   }
 // });
-// 引用聊天消息容器
-const chatMessages = ref(null);
-// 聊天会话列表
-const sessions = ref([]);
-// 当前选中的会话
-const currentSession = ref({});
-// 新消息输入框内容
-const newMessage = ref('');
-// 聊天记录
-const messages = ref([]);
-// 定义事件源的引用，用于实时通信
-const eventSource = ref(null);
 
-// 选择会话
-const selectSession = (session) => {
-  currentSession.value = session;
-  messages.value = [];
-  // 查询当前会话聊天记录
-  loadMessages();
-};
+  // 引用聊天消息容器
+  const chatMessages = ref(null);
+  // 聊天会话列表
+  const sessions = ref([]);
+  // 当前选中的会话
+  const currentSession = ref({});
+  // 新消息输入框内容
+  const newMessage = ref('');
+  // 聊天记录
+  const messages = ref([]);
+  // 定义事件源的引用，用于实时通信
+  const eventSource = ref(null);
+
+  // 选择会话
+  const selectSession = (session) => {
+    currentSession.value = session;
+    messages.value = [];
+    // 查询当前会话聊天记录
+    loadMessages();
+  };
 
 
-// 创建新会话
-const openNewSession = () => {
-  newMessage.value = '';
-  messages.value = [];
-  currentSession.value = {};
-};
+  // 创建新会话
+  const openNewSession = () => {
+    newMessage.value = '';
+    messages.value = [];
+    currentSession.value = {};
+  };
 
-// 发送消息
-const sendMessage = () => {
-  const value = newMessage.value;
-  if (!value) {
-    return ElMessage.warning('请输入问题');
-  }
-  if (!currentSession.value) {
-    // 添加一个模拟的新Session
-    const sessionId = '';
-    const sessionName = value.length >= 15 ? String(value).substring(0, 15) + '...' : value;
-    sessions.value = [{
-      sessionName,
-      sessionId
-    }].concat(sessions.value);
-  }
-  if (eventSource.value != null) {
-    eventSource.value.close();
-  }
-  // 将用户输入的消息添加到消息列表中，并设置消息类型为用户发送
-  messages.value.push({
-    msg: newMessage.value,
-    type: 1
-  });
-  messages.value.push({
-    msg: '',
-    type: 2
-  });
-  newMessage.value = '';
-  let messageOrigin = '';
-
-  const apiBaseUrl = "http://127.0.0.1:8000/api/chat_stream";
-  const encodedValue = encodeURIComponent(value);
-  const encodedSessionId = currentSession.value?.sessionId ? encodeURIComponent(currentSession.value.sessionId) : '';
-  const userId = localStorage.getItem('WANGANUI_USER') || '';
-
-  eventSource.value = new EventSource(`${apiBaseUrl}?message=${encodedValue}&sessionId=${encodedSessionId}&userId=${userId}`);
-  eventSource.value.onmessage = function (event) {
-    try {
-      let substring = event.data.replaceAll("data:", "");
-      messages.value[messages.value.length - 1].msg = parseMarkdown(substring)
-      // let parse = JSON.parse(substring);
-      // messageOrigin += parse.result?.output?.text;
-      // if (parse.result?.metadata?.finishReason === "stop") {
-      //   messageOrigin = messageOrigin.replace("<think>", "<div class='think'>").replace("</think>", "</div>");
-      //   eventSource.value.close();
-      // }
-      // messages.value[messages.value.length - 1].msg = parseMarkdown(messageOrigin) //md.render(messageOrigin);
-      // 调用滚动方法
-      scrollToBottom();
-      if (!currentSession.value.sessionId) {
-        init(false);
-      }
-    } catch (error) {
-      console.error("消息异常:", error);
+  // 发送消息
+  const sendMessage = () => {
+    const value = newMessage.value;
+    if (!value) {
+      return ;// ElMessage.warning('请输入问题');
     }
-  };
-  eventSource.value.onerror = function (event) {
-    eventSource.value.close();
-  };
-  eventSource.value.onclose = function (event) {
-    console.log("事件关闭:", event);
-  };
-};
-
-/**
- * 初始化会话列表
- * @param init 是否初次加载
- */
-const init = (init) => {
-  let userId = localStorage.getItem('WANGANUI_USER');
-  // 设置一个默认的用户ID，并存储到缓存
-  if (!userId) {
-    userId = String(new Date().getTime());
-    localStorage.setItem('WANGANUI_USER', userId);
-  }
-  getSession(userId).then(res => {
-    sessions.value = res.data;
-    currentSession.value = sessions?.value[0];
-    if (sessions.value.length > 0 && init) {
-      // 查询当前会话聊天记录
-      loadMessages();
+    if (!currentSession.value) {
+      // 添加一个模拟的新Session
+      const sessionId = '';
+      const sessionName = value.length >= 15 ? String(value).substring(0, 15) + '...' : value;
+      sessions.value = [{
+        sessionName,
+        sessionId
+      }].concat(sessions.value);
     }
-  });
-};
-// 初始化会话列表
-init(true)
-
-// 查询聊天记录
-const loadMessages = () => {
-  getMessages(currentSession.value.sessionId).then(res => {
-    res.data.forEach(item => {
-      if (item.messageType === 'USER') {
-        messages.value.push({
-          msg: item.text,
-          type: 1
-        });
-      } else {
-        const text = item.text.replaceAll("<think>", "<div class='think'>").replaceAll("</think>", "</div>");
-        messages.value.push({
-          msg: parseMarkdown(messageOrigin), //md.render(text),
-          type: 2
-        });
-      }
+    if (eventSource.value != null) {
+      eventSource.value.close();
+    }
+    // 将用户输入的消息添加到消息列表中，并设置消息类型为用户发送
+    messages.value.push({
+      msg: newMessage.value,
+      type: 1
     });
-  });
-  setTimeout(() => {
-    scrollToBottom();
-  }, 200);
-};
+    messages.value.push({
+      msg: '',
+      type: 2
+    });
+    const aiMessageIndex = messages.value.length - 1; // 记录AI消息索引
 
-/**
- * 滚动到聊天框底部
- */
-const scrollToBottom = async () => {
-  await nextTick();
-  if (chatMessages.value) {
-    const lastMessage = chatMessages.value?.children[chatMessages.value.children.length - 1];
-    if (lastMessage) {
-      lastMessage.scrollIntoView({behavior: 'smooth', block: 'end'});
+    newMessage.value = '';
+
+    // 新增：累积消息的变量
+    let fullResponse = '';
+    let messageOrigin = '';
+
+    const apiBaseUrl = "http://127.0.0.1:8000/api/chat_stream";
+    const encodedValue = encodeURIComponent(value);
+    const encodedSessionId = currentSession.value?.sessionId ? encodeURIComponent(currentSession.value.sessionId) : '';
+    const userId = localStorage.getItem('WANGANUI_USER') || '';
+
+    eventSource.value = new EventSource(`${apiBaseUrl}?message=${encodedValue}&sessionId=${encodedSessionId}&userId=${userId}`);
+    eventSource.value.onmessage = function (event) {
+      try {
+        let chunk = event.data.replace("data:", "");
+        fullResponse += chunk; // 累积片段
+
+        // 更新消息对象：存储原始文本和渲染后的内容
+        messages.value[aiMessageIndex].raw = fullResponse;
+        messages.value[aiMessageIndex].msg = renderMarkdown(fullResponse);
+
+        // let substring = event.data.replaceAll("data:", "");
+        // messages.value[messages.value.length - 1].msg += renderMarkdown(substring)
+        
+        // let parse = JSON.parse(substring);
+        // messageOrigin += parse.result?.output?.text;
+        // if (parse.result?.metadata?.finishReason === "stop") {
+        //   messageOrigin = messageOrigin.replace("<think>", "<div class='think'>").replace("</think>", "</div>");
+        //   eventSource.value.close();
+        // }
+        // messages.value[messages   .value.length - 1].msg = renderMarkdown(messageOrigin) //md.render(messageOrigin);
+        // 调用滚动方法
+        scrollToBottom();
+        if (!currentSession.value.sessionId) {
+          init(false);
+        }
+      } catch (error) {
+        console.error("消息异常:", error);
+      }
+    };
+    eventSource.value.onerror = function (event) {
+      eventSource.value.close();
+    };
+    eventSource.value.onclose = function (event) {
+      console.log("事件关闭:", event);
+      if (currentSession.value.sessionId) {
+        // 保存完整对话（需要实现对应API）
+        saveMessage(currentSession.value.sessionId, fullResponse);
+      }
+    };
+  };
+
+  /**
+   * 初始化会话列表
+   * @param init 是否初次加载
+   */
+  const init = (init) => {
+    let userId = localStorage.getItem('WANGANUI_USER');
+    // 设置一个默认的用户ID，并存储到缓存
+    if (!userId) {
+      userId = String(new Date().getTime());
+      localStorage.setItem('WANGANUI_USER', userId);
     }
-  } else {
-    console.error('聊天框不可用');
-  }
-};
+    // getSession(userId).then(res => {
+    //   sessions.value = res.data;
+    //   currentSession.value = sessions?.value[0];
+    //   if (sessions.value.length > 0 && init) {
+    //     // 查询当前会话聊天记录
+    //     loadMessages();
+    //   }
+    // });
+  };
+  // 初始化会话列表
+  init(true)
+
+  // 查询聊天记录
+  const loadMessages = () => {
+    getMessages(currentSession.value.sessionId).then(res => {
+      res.data.forEach(item => {
+        if (item.messageType === 'USER') {
+          messages.value.push({
+            msg: item.text,
+            type: 1
+          });
+        } else {
+          const text = item.text.replaceAll("<think>", "<div class='think'>").replaceAll("</think>", "</div>");
+          messages.value.push({
+            msg: renderMarkdown(messageOrigin), //md.render(text),
+            type: 2
+          });
+        }
+      });
+    });
+    setTimeout(() => {
+      scrollToBottom();
+    }, 200);
+  };
+
+  /**
+   * 滚动到聊天框底部
+   */
+  const scrollToBottom = async () => {
+    await nextTick();
+    if (chatMessages.value) {
+      const lastMessage = chatMessages.value?.children[chatMessages.value.children.length - 1];
+      if (lastMessage) {
+        lastMessage.scrollIntoView({behavior: 'smooth', block: 'end'});
+      }
+    } else {
+      console.error('聊天框不可用');
+    }
+  };
 </script>
 
 <style scoped lang="scss">
