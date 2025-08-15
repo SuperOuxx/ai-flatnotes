@@ -221,6 +221,26 @@ async def sse_stream():
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
+from sse_starlette import EventSourceResponse, ServerSentEvent
+
+@app.get(
+    "/api/chat_stream",
+    # dependencies=auth_deps,
+)
+async def chat_stream(message: str):
+    user_id = auth.get_user_hash()
+    chat_func = Chat(user_id=user_id)
+    resp = chat_func.astream_chat(query=message) # . test_chat(new_message)
+
+    async def generate(message):
+        # while True:
+        async for chunk in resp:
+            print(f"{chunk}", end="")
+            # json.dumps({"text": "completed", "task_id": task_id, "resp": resp})
+            yield f"data:{chunk}"
+    
+    return EventSourceResponse(content=generate(message))
+
 
 # Create a websocket connection
 @app.websocket("/ws")

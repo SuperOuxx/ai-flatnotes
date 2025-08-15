@@ -4,8 +4,13 @@ import ToastService from "primevue/toastservice";
 import { createApp } from "vue";
 import { createPinia } from "pinia";
 import router from "/router.js";
+// import ElementPlus from 'element-plus' // 引入 Element Plus
+// import 'element-plus/dist/index.css' // 引入 Element Plus 的样式
 
-const app = createApp(App);
+const app = createApp(App)
+  // .use(ElementPlus) // 使用 Element Plus
+  // .mount('#app')
+  ;
 const pinia = createPinia();
 
 app.use(router);

@@ -164,3 +164,12 @@ export async function createTask(query, simple_chat,
     return Promise.reject(response);
   }
 }
+
+export function getMessages(params = {}) {
+    return api.get("/api/chat/ai/messages?sessionId=" + params);
+}
+
+  // 查询聊天会话
+export function  getSession(params = {}) {
+    return api.get("/api/chat/ai/sessions?userId=" + params);
+}
