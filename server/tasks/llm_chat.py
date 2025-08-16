@@ -52,8 +52,8 @@ class Chat():
     def test_chat(self, query):
         return llm.chat(messages=[ChatMessage(role="user", content=query)])
 
-    async def astream_chat(self, query: str):
-        msg_list = self.chat_store.get_chat_history()
+    async def astream_chat(self, session_id,  query: str):
+        msg_list = self.chat_store.get_chat_history(session_id)
         msg_list.append(ChatMessage(role="user", content=query))
         if len(msg_list) > 5:
             msg_list = msg_list[-5: ]
@@ -63,9 +63,9 @@ class Chat():
             # print(chunk.delta, end="")
             yield chunk.delta
 
-    def get_all_chat_history(self, need_raw_str=False):
+    def get_all_chat_history(self, session_id,  need_raw_str=False):
         # print(f"当前存储路径：{self.chat_store.path}")
-        msg_list = self.chat_store.get_chat_history()
+        msg_list = self.chat_store.get_chat_history(session_id)
         # 如果不需要字符串格式的数据，就返回 List[ChatMessage]，否则构造二维字符串列表
         if not need_raw_str:
             return msg_list
@@ -74,10 +74,10 @@ class Chat():
             msg_list2 = convert_1d_to_2d(lst=msg_list, extract_field="content")
             return msg_list2
         
-    def save_this_round_msg(self, query, ai_resp):
+    def save_this_round_msg(self, query, ai_resp, session_id):
         msg_in_this_round = [ChatMessage(role=MessageRole.USER, content=query),
                              ChatMessage(role=MessageRole.ASSISTANT, content=ai_resp)]
-        self.chat_store.save_messages(msg_in_this_round)
+        self.chat_store.save_messages(msg_in_this_round, session_id)
 
     def test_stream_chat(self, query: str):
         msg_list = [ChatMessage(role="user", content=query)]

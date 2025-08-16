@@ -33,7 +33,7 @@
   import {nextTick, ref} from 'vue';
   import {
     getMessages,
-    getSession,
+    getSessions,
   } from "../api.js";
 
   import { marked } from 'marked';
@@ -142,12 +142,12 @@
     let fullResponse = '';
     let messageOrigin = '';
 
-    const apiBaseUrl = "http://127.0.0.1:8000/api/chat_stream";
+    const apiBaseUrl = "http://127.0.0.1:8000/api/chat/ai/stream";
     const encodedValue = encodeURIComponent(value);
     const encodedSessionId = currentSession.value?.sessionId ? encodeURIComponent(currentSession.value.sessionId) : '';
-    const userId = localStorage.getItem('WANGANUI_USER') || '';
+    const userId = localStorage.getItem('USER_ID') || '';
 
-    eventSource.value = new EventSource(`${apiBaseUrl}?message=${encodedValue}&sessionId=${encodedSessionId}&userId=${userId}`);
+    eventSource.value = new EventSource(`${apiBaseUrl}?message=${encodedValue}&session_id=${encodedSessionId}&user_id=${userId}`);
     eventSource.value.onmessage = function (event) {
       try {
         let chunk = event.data.replace("data:", "");
@@ -193,11 +193,11 @@
    * @param init 是否初次加载
    */
   const init = (init) => {
-    let userId = localStorage.getItem('WANGANUI_USER');
+    let userId = localStorage.getItem('USER_ID');
     // 设置一个默认的用户ID，并存储到缓存
     if (!userId) {
       userId = String(new Date().getTime());
-      localStorage.setItem('WANGANUI_USER', userId);
+      localStorage.setItem('USER_ID', userId);
     }
     // getSession(userId).then(res => {
     //   sessions.value = res.data;

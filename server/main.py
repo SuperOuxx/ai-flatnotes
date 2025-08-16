@@ -238,76 +238,102 @@ async def sse_stream():
 
 
 @app.get(
-    "/api/chat_stream",
+    "/api/chat/ai/stream",
     # dependencies=auth_deps,
 )
-async def chat_stream(message: str):
+async def chat_stream(message: str, session_id):
     user_id = auth.get_user_hash()
     chat_func = Chat(user_id=user_id)
-    resp = chat_func.astream_chat(query=message) # . test_chat(new_message)
+    resp = chat_func.astream_chat(session_id, query=message)
 
-    async def generate(message):
-        # while True:
+    chunks = []  # Store chunks as they come in
+
+    async def generate():
         async for chunk in resp:
             print(f"{chunk}", end="")
-            # json.dumps({"text": "completed", "task_id": task_id, "resp": resp})
-            yield f"data:{chunk}"
-    
-    return EventSourceResponse(content=generate(message))
+            chunks.append(chunk)  # Collect each chunk
+            yield ServerSentEvent(data=chunk)  # Use proper SSE formatting
+
+        # After streaming completes, save the full response
+        full_response = "".join(chunks)
+        chat_func.save_this_round_msg(query=message, ai_resp=full_response, session_id=session_id)
+
+    return EventSourceResponse(generate())
+
+@app.get(
+    "/api/chat/ai/sessions",
+    # dependencies=auth_deps,
+)
+def get_sessions():
+    pass
+
+
+@app.get(
+    "/api/chat/ai/messages",
+    # dependencies=auth_deps,
+)
+def get_messages(sessionId):
+    user_id = auth.get_user_hash()
+    chat_func = Chat(user_id=user_id)
+    messages = chat_func.get_all_chat_history(session_id=sessionId)
+    if messages:
+        return [{'role': msg.role, 'content': msg.content} for msg in messages]
+    return []
+
 
 
 # Create a websocket connection
-@app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    await websocket.accept()
-    user_id = auth.get_user_hash()
-    chat_func = Chat(user_id=user_id)
-    # if not chat_func:
-    #     user_id = auth.get_user_hash()
-    #     chat_func = Chat(user_id=user_id)
-    try:
-        while True:
-            data = await websocket.receive_text()
-            message_data = json.loads(data)
-            if message_data['type'] == 'get_messages':
-                messages = chat_func.get_all_chat_history()
-                if messages:
-                    msg_arr = [{'role': msg.role, 'content': msg.content} for msg in messages]
-                    await websocket.send_text(json.dumps({'msg_arr': msg_arr}))
+# @app.websocket("/ws")
+# async def websocket_endpoint(websocket: WebSocket):
+#     await websocket.accept()
+#     user_id = auth.get_user_hash()
+#     chat_func = Chat(user_id=user_id)
+#     # if not chat_func:
+#     #     user_id = auth.get_user_hash()
+#     #     chat_func = Chat(user_id=user_id)
+#     try:
+#         while True:
+#             data = await websocket.receive_text()
+#             message_data = json.loads(data)
+#             if message_data['type'] == 'get_messages':
+#                 messages = chat_func.get_all_chat_history()
+#                 if messages:
+#                     msg_arr = [{'role': msg.role, 'content': msg.content} for msg in messages]
+#                     await websocket.send_text(json.dumps({'msg_arr': msg_arr}))
 
-            if message_data['type'] == 'new_message':
-                new_message = message_data['content']
-                resp = chat_func.astream_chat(query=new_message) # . test_chat(new_message)
-                # await websocket.send_text(json.dumps({'type': 'message_update', 'content': resp, "role": "assistant"}))
-                # async for chunk in resp:
-                #     print(chunk)
+#             if message_data['type'] == 'new_message':
+#                 new_message = message_data['content']
+#                 resp = chat_func.astream_chat(query=new_message) # . test_chat(new_message)
+#                 # await websocket.send_text(json.dumps({'type': 'message_update', 'content': resp, "role": "assistant"}))
+#                 # async for chunk in resp:
+#                 #     print(chunk)
                 
-                #     await websocket.send_text(json.dumps({'type': 'message_update', 'content': chunk, "role": "assistant"}))
+#                 #     await websocket.send_text(json.dumps({'type': 'message_update', 'content': chunk, "role": "assistant"}))
                 
-                async for chunk in resp:
-                    await websocket.send_text(json.dumps({
-                        'type': 'message_part',
-                        'content': chunk,
-                        "role": "assistant"
-                    }))
-                # 发送完成信号
-                await websocket.send_text(json.dumps({
-                    'type': 'message_complete',
-                    "role": "assistant"
-                }))
-                # 保存完整响应（需在Chat类中实现获取最终内容的方法）
-                full_response = "".join([chunk for chunk in resp])
-                chat_func.save_this_round_msg(query=new_message, ai_resp=full_response)
-                # chat_func.save_this_round_msg(query=new_message, ai_resp=resp.message.content)
+#                 async for chunk in resp:
+#                     await websocket.send_text(json.dumps({
+#                         'type': 'message_part',
+#                         'content': chunk,
+#                         "role": "assistant"
+#                     }))
+#                 # 发送完成信号
+#                 await websocket.send_text(json.dumps({
+#                     'type': 'message_complete',
+#                     "role": "assistant"
+#                 }))
+#                 # 保存完整响应（需在Chat类中实现获取最终内容的方法）
+#                 full_response = "".join([chunk for chunk in resp])
+#                 chat_func.save_this_round_msg(query=new_message, ai_resp=full_response)
+#                 # chat_func.save_this_round_msg(query=new_message, ai_resp=resp.message.content)
 
-            # if message_data['type'] == 'clear_messages':
-            #     messages_collection.delete_many({})
-            #     messages_collection.insert_one({'role': 'system', 'content': 'You are a helpful assistant'})
-            #     messages = get_messages()
-            #     await websocket.send_text(json.dumps({'type': 'message_update', 'content': messages[1:]}))
+#             # if message_data['type'] == 'clear_messages':
+#             #     messages_collection.delete_many({})
+#             #     messages_collection.insert_one({'role': 'system', 'content': 'You are a helpful assistant'})
+#             #     messages = get_messages()
+#             #     await websocket.send_text(json.dumps({'type': 'message_update', 'content': messages[1:]}))
 
-    except WebSocketDisconnect:
-        print("Client disconnected")
+#     except WebSocketDisconnect:
+#         print("Client disconnected")
 
 @router.get(
     "/api/tags",
