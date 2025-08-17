@@ -11,8 +11,6 @@ import os
 from local_path import CHAT_STORE_PATH
 
 
-
-
 # 历史对话的存储路径
 # CHAT_STORE_PATH = "./chat_store/[user_id].json"
 

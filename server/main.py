@@ -49,7 +49,16 @@ replace_base_href("client/dist/index.html", global_config.path_prefix)
 
 red = redis.Redis(host='192.168.7.183', db=13)
 
+
+user_id = auth.get_user_hash()
 chat_func: Chat = None
+
+async def get_chat():
+    return Chat(user_id=auth.get_user_hash())
+    # global chat_func
+    # if chat_func is None:
+    #     chat_func = Chat(user_id=auth.get_user_hash())
+    # return chat_func
 
 # region UI
 @router.get("/", include_in_schema=False)
@@ -61,8 +70,7 @@ chat_func: Chat = None
 def root(title: str = ""):
     with open("client/dist/index.html", "r", encoding="utf-8") as f:
         html = f.read()
-        user_id = auth.get_user_hash()
-        chat_func = Chat(user_id=user_id)
+        # user_id = auth.get_user_hash()
     return HTMLResponse(content=html)
 
 
@@ -75,8 +83,7 @@ if global_config.auth_type not in [AuthType.NONE, AuthType.READ_ONLY]:
     @router.post("/api/token", response_model=Token)
     def token(data: Login):
         try:
-            user_id = auth.get_user_hash()
-            chat_func = Chat(user_id=user_id)
+            # user_id = auth.get_user_hash()
             return auth.login(data)
         except ValueError:
             raise HTTPException(
@@ -198,7 +205,7 @@ def sse_event_generator():
         time.sleep(3)
 
 async def run_background_task(task_id: str, user_id: str, query: str):
-    resp = await chat_func.astream_chat(query)
+    resp = await chat.astream_chat(query)
     await red.publish(
         f"user:{user_id}",
         json.dumps({"status": "completed", "task_id": task_id, "resp": resp})
@@ -219,44 +226,30 @@ def create_task(
     # return StreamingResponse(sse_event_generator(), media_type="text/event-stream")
 
 
-@app.get("/api/sse")
-async def sse_stream():
-    pubsub = red.pubsub()
-    await pubsub.subscribe(f"user:{auth.get_user_hash()}")
-
-    async def event_generator():
-        try:
-            while True:
-                message = await pubsub.get_message(ignore_subscribe_messages=True)
-                if message:
-                    yield f"data: {message.decode()}\n\n"
-        finally:
-            await pubsub.unsubscribe(f"user:{auth.get_user_hash()}")
-            red.close()
-
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
-
 
 @app.get(
     "/api/chat/ai/stream",
     # dependencies=auth_deps,
 )
 async def chat_stream(message: str, session_id):
-    user_id = auth.get_user_hash()
-    chat_func = Chat(user_id=user_id)
-    resp = chat_func.astream_chat(session_id, query=message)
+    # user_id = auth.get_user_hash()
+    chat = await get_chat()
 
-    chunks = []  # Store chunks as they come in
+    resp = await chat.stream_chat_session(session_id, query=message)
+
+    chunks = []
 
     async def generate():
         async for chunk in resp:
-            print(f"{chunk}", end="")
-            chunks.append(chunk)  # Collect each chunk
-            yield ServerSentEvent(data=chunk)  # Use proper SSE formatting
+            chunks.append(chunk)
+            yield ServerSentEvent(data=chunk)
 
-        # After streaming completes, save the full response
         full_response = "".join(chunks)
-        chat_func.save_this_round_msg(query=message, ai_resp=full_response, session_id=session_id)
+        chat.save_this_round_msg(
+            query=message, 
+            ai_resp=full_response, 
+            session_id=session_id
+        )
 
     return EventSourceResponse(generate())
 
@@ -264,18 +257,21 @@ async def chat_stream(message: str, session_id):
     "/api/chat/ai/sessions",
     # dependencies=auth_deps,
 )
-def get_sessions():
-    pass
+async def get_sessions():
+    # user_id = auth.get_user_hash()
+    chat = await get_chat()
+    sessions = chat.get_all_sessions()
+    return [{"id": s.id, "title": s.title} for s in sessions]
 
 
 @app.get(
     "/api/chat/ai/messages",
     # dependencies=auth_deps,
 )
-def get_messages(sessionId):
-    user_id = auth.get_user_hash()
-    chat_func = Chat(user_id=user_id)
-    messages = chat_func.get_all_chat_history(session_id=sessionId)
+async def get_messages(sessionId):
+    # user_id = auth.get_user_hash()
+    chat = await get_chat()
+    messages = chat.get_all_chat_history(session_id=sessionId)
     if messages:
         return [{'role': msg.role, 'content': msg.content} for msg in messages]
     return []
@@ -286,24 +282,24 @@ def get_messages(sessionId):
 # @app.websocket("/ws")
 # async def websocket_endpoint(websocket: WebSocket):
 #     await websocket.accept()
-#     user_id = auth.get_user_hash()
-#     chat_func = Chat(user_id=user_id)
+#     # user_id = auth.get_user_hash()
+#     chat = await get_chat()
 #     # if not chat_func:
-#     #     user_id = auth.get_user_hash()
-#     #     chat_func = Chat(user_id=user_id)
+#     #     # user_id = auth.get_user_hash()
+#     #     chat = await get_chat()
 #     try:
 #         while True:
 #             data = await websocket.receive_text()
 #             message_data = json.loads(data)
 #             if message_data['type'] == 'get_messages':
-#                 messages = chat_func.get_all_chat_history()
+#                 messages = chat.get_all_chat_history()
 #                 if messages:
 #                     msg_arr = [{'role': msg.role, 'content': msg.content} for msg in messages]
 #                     await websocket.send_text(json.dumps({'msg_arr': msg_arr}))
 
 #             if message_data['type'] == 'new_message':
 #                 new_message = message_data['content']
-#                 resp = chat_func.astream_chat(query=new_message) # . test_chat(new_message)
+#                 resp = chat.astream_chat(query=new_message) # . test_chat(new_message)
 #                 # await websocket.send_text(json.dumps({'type': 'message_update', 'content': resp, "role": "assistant"}))
 #                 # async for chunk in resp:
 #                 #     print(chunk)
@@ -323,8 +319,8 @@ def get_messages(sessionId):
 #                 }))
 #                 # 保存完整响应（需在Chat类中实现获取最终内容的方法）
 #                 full_response = "".join([chunk for chunk in resp])
-#                 chat_func.save_this_round_msg(query=new_message, ai_resp=full_response)
-#                 # chat_func.save_this_round_msg(query=new_message, ai_resp=resp.message.content)
+#                 chat.save_this_round_msg(query=new_message, ai_resp=full_response)
+#                 # chat.save_this_round_msg(query=new_message, ai_resp=resp.message.content)
 
 #             # if message_data['type'] == 'clear_messages':
 #             #     messages_collection.delete_many({})

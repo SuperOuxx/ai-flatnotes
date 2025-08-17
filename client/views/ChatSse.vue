@@ -4,7 +4,7 @@
     <div class="chat-sessions">
       <div class="chat-header">
         AI聊天机器人
-        <button type="primary" style="float: right" @click="openNewSession">开启新会话</button>
+        <button type="primary" style="float: right" @click="openNewSession">+ 新会话</button>
       </div>
       <ul>
         <li v-for="session in sessions" :key="session.sessionId" @click="selectSession(session)">
@@ -110,17 +110,15 @@
   // 发送消息
   const sendMessage = () => {
     const value = newMessage.value;
-    if (!value) {
-      return ;// ElMessage.warning('请输入问题');
-    }
+    if (!value) return;
+
+    // 如果当前没有会话，设置一个临时对象（sessionId为null）
     if (!currentSession.value) {
-      // 添加一个模拟的新Session
-      const sessionId = '';
-      const sessionName = value.length >= 15 ? String(value).substring(0, 15) + '...' : value;
-      sessions.value = [{
-        sessionName,
-        sessionId
-      }].concat(sessions.value);
+      currentSession.value = {
+        sessionName: value.length >= 15 ? value.substring(0, 15) + '...' : value,
+        sessionId: null
+      };
+      sessions.value = [currentSession.value].concat(sessions.value);
     }
     if (eventSource.value != null) {
       eventSource.value.close();
@@ -192,22 +190,45 @@
    * 初始化会话列表
    * @param init 是否初次加载
    */
-  const init = (init) => {
-    let userId = localStorage.getItem('USER_ID');
-    // 设置一个默认的用户ID，并存储到缓存
-    if (!userId) {
-      userId = String(new Date().getTime());
-      localStorage.setItem('USER_ID', userId);
+  // const init = (init) => {
+  //   let userId = localStorage.getItem('USER_ID');
+  //   // 设置一个默认的用户ID，并存储到缓存
+  //   if (!userId) {
+  //     userId = String(new Date().getTime());
+  //     localStorage.setItem('USER_ID', userId);
+  //   }
+  //   // getSession(userId).then(res => {
+  //   //   sessions.value = res.data;
+  //   //   currentSession.value = sessions?.value[0];
+  //   //   if (sessions.value.length > 0 && init) {
+  //   //     // 查询当前会话聊天记录
+  //   //     loadMessages();
+  //   //   }
+  //   // });
+  // };
+
+  const init = async (isFirstLoad) => {
+  let userId = localStorage.getItem('USER_ID');
+  if (!userId) {
+    userId = String(new Date().getTime());
+    localStorage.setItem('USER_ID', userId);
+  }
+
+  try {
+    const res = await getSessions(); // 调用后端接口获取会话列表
+    sessions.value = res.data.map(session => ({
+      sessionId: session.id,
+      sessionName: session.title
+    }));
+
+    if (sessions.value.length > 0 && isFirstLoad) {
+      currentSession.value = sessions.value[0];
+      loadMessages();
     }
-    // getSession(userId).then(res => {
-    //   sessions.value = res.data;
-    //   currentSession.value = sessions?.value[0];
-    //   if (sessions.value.length > 0 && init) {
-    //     // 查询当前会话聊天记录
-    //     loadMessages();
-    //   }
-    // });
-  };
+  } catch (error) {
+    console.error("获取会话列表失败:", error);
+  }
+};
   // 初始化会话列表
   init(true)
 
@@ -223,7 +244,7 @@
         } else {
           const text = item.text.replaceAll("<think>", "<div class='think'>").replaceAll("</think>", "</div>");
           messages.value.push({
-            msg: renderMarkdown(messageOrigin), //md.render(text),
+            msg: renderMarkdown(text), //md.render(text),
             type: 2
           });
         }

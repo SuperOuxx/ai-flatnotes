@@ -43,14 +43,58 @@ def convert_1d_to_2d(lst, extract_field=None, step=2):
         
     return result
 
+from sqlalchemy.orm import Session
+from .models import ChatSession
+from utils.db_util import DbUtils
+
 class Chat():
     def __init__(self, user_id, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.user_id = user_id
         self.chat_store = ChatStore(user_id=self.user_id)
+        self.db = DbUtils()
+
+
+    def get_or_create_session(self, session_id: str = None) -> ChatSession:
+        if session_id:
+            session = self.db.get_by(ChatSession, 
+                id=session_id,
+                user_id=self.user_id
+            )
+            if session:
+                return session[0]
+
+        # 创建新会话
+        new_session = ChatSession({
+            "user_id": self.user_id,
+            "title": "New Session"  # 初始标题
+        })
+        self.db.save(new_session)
+        return new_session
+
+    def get_all_sessions(self):
+        return self.db.get_sorted(ChatSession, user_id=self.user_id)
+            #                       {
+            #     "user_id": self.user_id
+            # })
+
+    def update_session_title(self, session_id: str, title: str):
+        self.db.update(ChatSession, {"title": title})
 
     def test_chat(self, query):
         return llm.chat(messages=[ChatMessage(role="user", content=query)])
+    
+    async def stream_chat_session(self, session_id,  query: str):
+        # 获取或创建会话
+        session = self.get_or_create_session(session_id)
+        session_id = session.id
+
+        # 如果是新会话，更新标题为第一条消息
+        if not session.title and query:
+            title = query[:15] + '...' if len(query) > 15 else query
+            self.update_session_title(session_id, title)
+
+        return self.astream_chat(session_id, query=query)
 
     async def astream_chat(self, session_id,  query: str):
         msg_list = self.chat_store.get_chat_history(session_id)
@@ -86,7 +130,7 @@ class Chat():
             print(chunk.delta, end="")
 
 
-if __name__ == "__main__":
-    c = Chat(user_id="32906025200850466097890969438382775665167326886116576518565743686775373059432")
-    his = c.get_all_chat_history()
-    print(his)
+# if __name__ == "__main__":
+#     c = Chat(user_id="32906025200850466097890969438382775665167326886116576518565743686775373059432")
+#     his = c.get_all_chat_history()
+#     print(his)
