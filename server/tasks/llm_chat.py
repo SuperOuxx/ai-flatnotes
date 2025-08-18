@@ -1,8 +1,9 @@
 from llama_index.llms.openai_like import OpenAILike
-from llama_index.core.base.llms.types import ChatMessage, MessageRole
+from llama_index.core.base.llms.types import ChatMessage, MessageRole, CompletionResponse
 import os
 import openai
 
+from utils.extract_words import choose_longest_word
 from tasks.chat_store import ChatStore
 # from chat_store import ChatStore
 
@@ -47,6 +48,20 @@ from sqlalchemy.orm import Session
 from .models import ChatSession
 from utils.db_util import DbUtils
 
+def llamacpp_restful_req(query: str):
+    import requests
+    import json
+
+    url = "http://localhost:18080/v1/completions"
+    payload = {
+        "prompt": query
+    }
+
+    response = requests.post(url, data=json.dumps(payload))
+    resp_json = json.loads(response.text)
+    return resp_json["choices"][0]["text"]
+
+
 class Chat():
     def __init__(self, user_id, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -55,22 +70,22 @@ class Chat():
         self.db = DbUtils()
 
 
-    def get_or_create_session(self, session_id: str = None) -> ChatSession:
+    def get_or_create_session(self, title: str, session_id: str = None) -> ChatSession:
         if session_id:
             session = self.db.get_by(ChatSession, 
                 id=session_id,
                 user_id=self.user_id
             )
             if session:
-                return session[0]
+                return session[0].id
 
         # 创建新会话
         new_session = ChatSession({
             "user_id": self.user_id,
-            "title": "New Session"  # 初始标题
+            "title": title
         })
-        self.db.save(new_session)
-        return new_session
+        return self.db.save(new_session)
+
 
     def get_all_sessions(self):
         return self.db.get_sorted(ChatSession, user_id=self.user_id)
@@ -84,17 +99,23 @@ class Chat():
     def test_chat(self, query):
         return llm.chat(messages=[ChatMessage(role="user", content=query)])
     
+    def get_curr_session_id(self):
+        return self.curr_session_id
+    
+    def get_curr_session_title(self):
+        return self.curr_session_title
+    
     async def stream_chat_session(self, session_id,  query: str):
+        title = "New Session"
+        if not session_id:
+            title = llamacpp_restful_req(f"""请给以下[提问]起一个标题，要求10个字以内，简明精炼，只输出标题。\r\n[提问]: {query}\r\n[标题]: /no_think""")
+            title = choose_longest_word(title)
+        
         # 获取或创建会话
-        session = self.get_or_create_session(session_id)
-        session_id = session.id
-
-        # 如果是新会话，更新标题为第一条消息
-        if not session.title and query:
-            title = query[:15] + '...' if len(query) > 15 else query
-            self.update_session_title(session_id, title)
-
-        return self.astream_chat(session_id, query=query)
+        self.curr_session_title = title
+        self.curr_session_id = self.get_or_create_session(title, session_id)
+        
+        return self.astream_chat(self.curr_session_id, query=query)
 
     async def astream_chat(self, session_id,  query: str):
         msg_list = self.chat_store.get_chat_history(session_id)

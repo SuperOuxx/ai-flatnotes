@@ -248,7 +248,11 @@ async def chat_stream(message: str, session_id):
         chat.save_this_round_msg(
             query=message, 
             ai_resp=full_response, 
-            session_id=session_id
+            session_id=chat.get_curr_session_id()
+        )
+        yield ServerSentEvent(
+            event="reloadTitle",
+            data=chat.get_curr_session_title(),
         )
 
     return EventSourceResponse(generate())

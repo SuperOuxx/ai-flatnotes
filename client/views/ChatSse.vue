@@ -107,6 +107,27 @@
     currentSession.value = {};
   };
 
+  // 新增刷新会话列表函数
+// const refreshSessions = async () => {
+//   try {
+//     const res = await getSessions();
+//     sessions.value = res.data.map(session => ({
+//       sessionId: session.id,
+//       sessionName: session.title
+//     }));
+
+//     // 更新当前会话的标题
+//     const updatedSession = sessions.value.find(
+//       s => s.sessionId === currentSession.value.sessionId
+//     );
+//     if (updatedSession) {
+//       currentSession.value.sessionName = updatedSession.sessionName;
+//     }
+//   } catch (error) {
+//     console.error("刷新会话列表失败:", error);
+//   }
+// };
+
   // 发送消息
   const sendMessage = () => {
     const value = newMessage.value;
@@ -143,9 +164,8 @@
     const apiBaseUrl = "http://127.0.0.1:8000/api/chat/ai/stream";
     const encodedValue = encodeURIComponent(value);
     const encodedSessionId = currentSession.value?.sessionId ? encodeURIComponent(currentSession.value.sessionId) : '';
-    const userId = localStorage.getItem('USER_ID') || '';
 
-    eventSource.value = new EventSource(`${apiBaseUrl}?message=${encodedValue}&session_id=${encodedSessionId}&user_id=${userId}`);
+    eventSource.value = new EventSource(`${apiBaseUrl}?message=${encodedValue}&session_id=${encodedSessionId}`);
     eventSource.value.onmessage = function (event) {
       try {
         let chunk = event.data.replace("data:", "");
@@ -165,6 +185,8 @@
         //   eventSource.value.close();
         // }
         // messages.value[messages   .value.length - 1].msg = renderMarkdown(messageOrigin) //md.render(messageOrigin);
+        
+        // refreshSessions();
         // 调用滚动方法
         scrollToBottom();
         if (!currentSession.value.sessionId) {
@@ -180,10 +202,40 @@
     eventSource.value.onclose = function (event) {
       console.log("事件关闭:", event);
       if (currentSession.value.sessionId) {
-        // 保存完整对话（需要实现对应API）
-        saveMessage(currentSession.value.sessionId, fullResponse);
       }
     };
+    eventSource.value.addEventListener("reloadTitle", (event) => {
+      console.log(`Data: ${event.data}`);
+
+      // 创建新对象而非修改属性
+      currentSession.value = {
+        ...currentSession.value,
+        sessionName: event.data
+      };
+
+      const index = sessions.value.findIndex(
+        s => s.sessionId === currentSession.value.sessionId
+      );
+
+      if (index !== -1) {
+        console.log("find session index = " + index)
+        // 创建新数组替换原数组
+        sessions.value = sessions.value.map(session => {
+          if (session.sessionId === currentSession.value.sessionId) {
+            return {...session, sessionName: event.data};
+          }
+          return session;
+        });
+        sessions.value = [
+          ...sessions.value.slice(0, index),
+          { ...sessions.value[index], sessionName: event.data },
+          ...sessions.value.slice(index + 1)
+        ];
+      }
+
+      console.log('After update - currentSession:', currentSession.value);
+      console.log('After update - sessions:', sessions.value);
+    });
   };
 
   /**
@@ -207,53 +259,68 @@
   //   // });
   // };
 
+  let isInitializing = false;
+
   const init = async (isFirstLoad) => {
-  let userId = localStorage.getItem('USER_ID');
-  if (!userId) {
-    userId = String(new Date().getTime());
-    localStorage.setItem('USER_ID', userId);
-  }
+    if (isInitializing) return;
+    isInitializing = true;
 
-  try {
-    const res = await getSessions(); // 调用后端接口获取会话列表
-    sessions.value = res.data.map(session => ({
-      sessionId: session.id,
-      sessionName: session.title
-    }));
-
-    if (sessions.value.length > 0 && isFirstLoad) {
-      currentSession.value = sessions.value[0];
-      loadMessages();
+    let userId = localStorage.getItem('USER_ID');
+    if (!userId) {
+      userId = String(new Date().getTime());
+      localStorage.setItem('USER_ID', userId);
     }
-  } catch (error) {
-    console.error("获取会话列表失败:", error);
-  }
+
+    try {
+      const res = await getSessions(); // 调用后端接口获取会话列表
+      sessions.value = res.data.map(session => ({
+        sessionId: session.id,
+        sessionName: session.title
+      }));
+
+      if (sessions.value.length > 0 && isFirstLoad) {
+        currentSession.value = sessions.value[0];
+        loadMessages();
+      }
+
+      // isInitializing = false;
+    } catch (error) {
+      console.error("获取会话列表失败:", error);
+    }
 };
   // 初始化会话列表
   init(true)
 
   // 查询聊天记录
   const loadMessages = () => {
+
     getMessages(currentSession.value.sessionId).then(res => {
+      // 清空当前消息
+      messages.value = [];
+
+      // 处理后端返回的数据
       res.data.forEach(item => {
-        if (item.messageType === 'USER') {
+        if (item.role === 'user') {
           messages.value.push({
-            msg: item.text,
-            type: 1
+            msg: item.content,
+            type: 1 // 用户消息
           });
-        } else {
-          const text = item.text.replaceAll("<think>", "<div class='think'>").replaceAll("</think>", "</div>");
+        } else if (item.role === 'assistant') {
+          // 处理AI回复中的思考标记
+          const text = item.content.replaceAll("<think>", "<div class='think'>").replaceAll("</think>", "</div>");
           messages.value.push({
-            msg: renderMarkdown(text), //md.render(text),
-            type: 2
+            msg: renderMarkdown(text),
+            type: 2 // AI消息
           });
         }
       });
-    });
-    setTimeout(() => {
+
+      // 滚动到底部
       scrollToBottom();
-    }, 200);
-  };
+    }).catch(error => {
+      console.error("加载消息失败:", error);
+    });
+};
 
   /**
    * 滚动到聊天框底部

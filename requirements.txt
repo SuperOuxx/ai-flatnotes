@@ -16,4 +16,6 @@ llama-index-storage-chat-store-postgres
 llama-index-vector-stores-postgres
 llama-index-storage-docstore-postgres
 
+llama-cpp-python==0.3.16
+
 websockets

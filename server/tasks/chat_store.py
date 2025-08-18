@@ -56,4 +56,5 @@ class ChatStore():
         return self.chat_store.get_messages(key = f"{self.user_id}/{session_id}")
     
     def save_messages(self, msg_list: List[ChatMessage], session_id):
-        self.chat_store.set_messages(f"{self.user_id}/{session_id}", messages=msg_list)
+        for msg in msg_list:
+            self.chat_store.add_message(f"{self.user_id}/{session_id}", message=msg)
