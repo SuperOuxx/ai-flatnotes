@@ -12,7 +12,12 @@
 
           <!-- Edit button -->
           <span class="edit-icon" @click.stop="toggleEditMode(session)">
-            {{ editingSessionId === session.sessionId ? '✓' : '✏️' }}
+            <svg v-if="editingSessionId === session.sessionId" viewBox="0 0 24 24" width="16" height="16">
+              <path :d="mdilCheck" fill="currentColor"/>
+            </svg>
+            <svg v-else viewBox="0 0 24 24" width="16" height="16">
+              <path :d="mdilPencil" fill="currentColor"/>
+            </svg>
           </span>
 
           <!-- Edit input (only shown in edit mode) -->
@@ -37,6 +42,20 @@
           <pre v-html="message.msg"></pre>
         </div>
       </div>
+
+      <div class="chat-tools">
+        <button title="联网检索" @click="toggleWebSearch" :class="{ 'active': enableWebSearch }">
+          <svg viewBox="0 0 24 24" width="24" height="24">
+            <path :d="mdilBluetooth" fill="currentColor"/>
+          </svg>
+        </button>
+        <button title="知识库" @click="toggleRAG"  :class="{ 'active': enableRAG }">
+          <svg viewBox="0 0 24 24" width="24" height="24">
+            <path :d="mdilBook" fill="currentColor"/>
+          </svg>
+        </button>
+      </div>
+
       <!-- 右侧下方聊天内容输入框 -->
       <div class="chat-input">
         <textarea v-model="newMessage" @keydown.enter="sendMessage" placeholder="请输入问题..."></textarea>
@@ -50,6 +69,8 @@
   import {
     mdilPencil,
     mdilCheck,
+    mdilBluetooth,    // 新增
+    mdilBook,    // 新增
   } from "@mdi/light-js";
 
   import {nextTick, ref, onMounted, watch } from 'vue';
@@ -157,6 +178,21 @@
   // Cancel editing
   const cancelEdit = () => {
     editingSessionId.value = null;
+  };
+
+  // 添加状态变量
+  const enableWebSearch = ref(false);
+  const enableRAG = ref(false);
+
+  // 添加切换方法
+  const toggleWebSearch = () => {
+    enableWebSearch.value = !enableWebSearch.value;
+    // 这里可以添加实际功能逻辑
+  };
+
+  const toggleRAG = () => {
+    enableRAG.value = !enableRAG.value;
+    // 这里可以添加实际功能逻辑
   };
 
 // import {ElMessage} from "element-plus";
@@ -717,6 +753,42 @@ li {
   }
 }
 
+.chat-tools {
+  display: flex;
+  padding: 8px 10px;
+  background-color: #f8f8f8;
+  border-top: 1px solid #eee;
+  border-bottom: 1px solid #eee;
+  gap: 16px;
+
+  button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+
+    &:hover {
+      background-color: #eaeaea;
+    }
+
+    svg {
+      margin-right: 4px;
+    }
+
+     &.active {
+      background-color: #e0e0e0;
+      box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.5);
+
+      svg {
+        color: #007bff;
+      }
+    }
+  }
+}
+
 
 // Dark 模式
 /* 暗黑模式样式 */
@@ -754,6 +826,26 @@ li {
     background-color: #2d2d2d;
     color: #e0e0e0;
     border-color: #444;
+  }
+
+  .chat-tools {
+    background-color: #2d2d2d;
+    border-color: #444;
+
+    button:hover {
+      background-color: #3a3a3a;
+    }
+
+    button {
+      &.active {
+        background-color: #3a3a3a;
+        box-shadow: 0 0 0 2px rgba(100, 149, 237, 0.5);
+
+        svg {
+          color: #6495ed;
+        }
+      }
+    }
   }
 }
 
