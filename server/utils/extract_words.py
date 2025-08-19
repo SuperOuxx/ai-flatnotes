@@ -34,25 +34,25 @@ def choose_longest_word(text):
       return ""
     return max(words, key=len)
 
+if __name__ == "__main__":
+    # 示例用法
+    text1 = "Hello, world!  This is a test."
+    text2 = "123abc456def"
+    text3 = "你好，世界！"
+    text4 = ""
+    text5 = " "
 
-# 示例用法
-text1 = "Hello, world!  This is a test."
-text2 = "123abc456def"
-text3 = "你好，世界！"
-text4 = ""
-text5 = " "
+    print(f'"{text1}" 提取第一个单词: {extract_first_word(text1)}')
+    print(f'"{text1}" 提取所有单词: {extract_all_words(text1)}')
 
-print(f'"{text1}" 提取第一个单词: {extract_first_word(text1)}')
-print(f'"{text1}" 提取所有单词: {extract_all_words(text1)}')
+    print(f'"{text2}" 提取第一个单词: {extract_first_word(text2)}')
+    print(f'"{text2}" 提取所有单词: {extract_all_words(text2)}')
 
-print(f'"{text2}" 提取第一个单词: {extract_first_word(text2)}')
-print(f'"{text2}" 提取所有单词: {extract_all_words(text2)}')
+    print(f'"{text3}" 提取第一个单词: {extract_first_word(text3)}')
+    print(f'"{text3}" 提取所有单词: {extract_all_words(text3)}')
 
-print(f'"{text3}" 提取第一个单词: {extract_first_word(text3)}')
-print(f'"{text3}" 提取所有单词: {extract_all_words(text3)}')
+    print(f'"{text4}" 提取第一个单词: {extract_first_word(text4)}')
+    print(f'"{text4}" 提取所有单词: {extract_all_words(text4)}')
 
-print(f'"{text4}" 提取第一个单词: {extract_first_word(text4)}')
-print(f'"{text4}" 提取所有单词: {extract_all_words(text4)}')
-
-print(f'"{text5}" 提取第一个单词: {extract_first_word(text5)}')
-print(f'"{text5}" 提取所有单词: {extract_all_words(text5)}')
+    print(f'"{text5}" 提取第一个单词: {extract_first_word(text5)}')
+    print(f'"{text5}" 提取所有单词: {extract_all_words(text5)}')

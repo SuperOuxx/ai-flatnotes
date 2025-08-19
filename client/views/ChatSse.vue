@@ -7,8 +7,8 @@
         <button type="primary" style="float: right" @click="openNewSession">+ 新会话</button>
       </div>
       <ul>
-        <li v-for="session in sessions" :key="session.sessionId" @click="selectSession(session)">
-          {{ session.sessionName }}
+        <li v-for="session in sessions" :key="session.sessionId" @click="selectSession(session)" :title="session.sessionName">
+          <span class="session-name">{{ session.sessionName }}</span>
         </li>
       </ul>
     </div>
@@ -30,7 +30,7 @@
 </template>
 
 <script setup>
-  import {nextTick, ref} from 'vue';
+  import {nextTick, ref, onMounted } from 'vue';
   import {
     getMessages,
     getSessions,
@@ -56,6 +56,19 @@
     return marked(content);
   };
 
+  onMounted(() => {
+    if (chatMessages.value) {
+      chatMessages.value.addEventListener('scroll', () => {
+        const currentPosition = chatMessages.value.scrollTop + chatMessages.value.clientHeight;
+        const totalHeight = chatMessages.value.scrollHeight;
+        const threshold = 50; // Pixels from bottom to consider "at bottom"
+
+        // Update scroll tracking
+        isUserScrolledUp.value = (currentPosition + threshold) < totalHeight;
+        lastScrollPosition.value = chatMessages.value.scrollTop;
+      });
+    }
+  });
 
 // import {ElMessage} from "element-plus";
 
@@ -90,6 +103,9 @@
   const messages = ref([]);
   // 定义事件源的引用，用于实时通信
   const eventSource = ref(null);
+  // 滚动标志
+  const isUserScrolledUp = ref(false);
+  const lastScrollPosition = ref(0);
 
   // 选择会话
   const selectSession = (session) => {
@@ -161,12 +177,15 @@
     let fullResponse = '';
     let messageOrigin = '';
 
+    isUserScrolledUp.value = false; // Reset when user sends new message
+
     const apiBaseUrl = "http://127.0.0.1:8000/api/chat/ai/stream";
     const encodedValue = encodeURIComponent(value);
     const encodedSessionId = currentSession.value?.sessionId ? encodeURIComponent(currentSession.value.sessionId) : '';
 
     eventSource.value = new EventSource(`${apiBaseUrl}?message=${encodedValue}&session_id=${encodedSessionId}`);
     eventSource.value.onmessage = function (event) {
+      
       try {
         let chunk = event.data.replace("data:", "");
         fullResponse += chunk; // 累积片段
@@ -201,40 +220,15 @@
     };
     eventSource.value.onclose = function (event) {
       console.log("事件关闭:", event);
-      if (currentSession.value.sessionId) {
-      }
     };
-    eventSource.value.addEventListener("reloadTitle", (event) => {
-      console.log(`Data: ${event.data}`);
+    eventSource.value.addEventListener("reloadTitle", async (event) => {
 
-      // 创建新对象而非修改属性
-      currentSession.value = {
-        ...currentSession.value,
-        sessionName: event.data
-      };
+      const res = await getSessions(); // 调用后端接口获取会话列表
+      sessions.value = res.data.map(session => ({
+        sessionId: session.id,
+        sessionName: session.title
+      }));
 
-      const index = sessions.value.findIndex(
-        s => s.sessionId === currentSession.value.sessionId
-      );
-
-      if (index !== -1) {
-        console.log("find session index = " + index)
-        // 创建新数组替换原数组
-        sessions.value = sessions.value.map(session => {
-          if (session.sessionId === currentSession.value.sessionId) {
-            return {...session, sessionName: event.data};
-          }
-          return session;
-        });
-        sessions.value = [
-          ...sessions.value.slice(0, index),
-          { ...sessions.value[index], sessionName: event.data },
-          ...sessions.value.slice(index + 1)
-        ];
-      }
-
-      console.log('After update - currentSession:', currentSession.value);
-      console.log('After update - sessions:', sessions.value);
     });
   };
 
@@ -327,14 +321,17 @@
    */
   const scrollToBottom = async () => {
     await nextTick();
-    if (chatMessages.value) {
-      const lastMessage = chatMessages.value?.children[chatMessages.value.children.length - 1];
-      if (lastMessage) {
-        lastMessage.scrollIntoView({behavior: 'smooth', block: 'end'});
-      }
-    } else {
-      console.error('聊天框不可用');
+    if (chatMessages.value && !isUserScrolledUp.value) {
+      chatMessages.value.scrollTop = chatMessages.value.scrollHeight;
     }
+    // if (chatMessages.value) {
+    //   const lastMessage = chatMessages.value?.children[chatMessages.value.children.length - 1];
+    //   if (lastMessage) {
+    //     lastMessage.scrollIntoView({behavior: 'smooth', block: 'end'});
+    //   }
+    // } else {
+    //   console.error('聊天框不可用');
+    // }
   };
 </script>
 
@@ -345,27 +342,121 @@
   padding: 0;
 }
 
+// .chat-sessions {
+//   width: 25%;
+//   background-color: #f4f4f4;
+//   padding: 10px;
+
+//   .chat-header {
+//     text-align: center;
+//     line-height: 30px;
+//     width: 100%;
+//   }
+
+//   ul {
+//     list-style-type: none;
+//     padding: 0;
+
+//     li {
+//       padding: 10px;
+//       cursor: pointer;
+
+//       &:hover {
+//         background-color: #ddd;
+//       }
+//     }
+//   }
+// }
+
 .chat-sessions {
   width: 25%;
   background-color: #f4f4f4;
   padding: 10px;
+  display: flex;          // Add flex container
+  flex-direction: column; // Stack children vertically
+  overflow: hidden;       // Hide overflow
 
   .chat-header {
     text-align: center;
     line-height: 30px;
     width: 100%;
+    flex-shrink: 0;       // Prevent header from shrinking
   }
 
   ul {
     list-style-type: none;
     padding: 0;
+    margin: 0;            // Remove default margin
+    overflow-y: auto;     // Vertical scrolling
+    overflow-x: hidden;   // Hide horizontal scroll by default
+    flex-grow: 1;         // Take remaining space
+    white-space: nowrap;  // Prevent text wrapping
 
     li {
       padding: 10px;
       cursor: pointer;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      position: relative;
+      display: flex;
+      align-items: center;
 
-      &:hover {
-        background-color: #ddd;
+      // Container for the session name
+      .session-name {
+        flex: 1;
+        overflow-x: hidden; // Hide scrollbar by default
+        overflow-y: hidden;
+        padding-bottom: 2px;
+        scrollbar-width: thin;
+        scrollbar-color: #888 #f0f0f0;
+        transition: all 0.3s ease;
+
+        // Custom scrollbar styling (hidden by default)
+        &::-webkit-scrollbar {
+          height: 4px;
+          opacity: 0;
+          transition: opacity 0.3s ease;
+        }
+
+        &::-webkit-scrollbar-thumb {
+          background-color: #888;
+          border-radius: 2px;
+          opacity: 0;
+          transition: opacity 0.3s ease;
+        }
+      }
+
+      // Show scrollbar on hover
+      &:hover .session-name {
+        overflow-x: auto; // Show scrollbar on hover
+
+        &::-webkit-scrollbar,
+        &::-webkit-scrollbar-thumb {
+          opacity: 1; // Fade in scrollbar
+        }
+      }
+
+      // Tooltip for full title
+      &::after {
+        content: attr(title);
+        position: absolute;
+        top: 100%;
+        left: 0;
+        background: #333;
+        color: white;
+        padding: 5px 10px;
+        border-radius: 4px;
+        white-space: nowrap;
+        z-index: 100;
+        font-size: 14px;
+        opacity: 0;
+        transition: opacity 0.3s;
+        pointer-events: none;
+      }
+
+      &:hover::after {
+        opacity: 1; // Show tooltip on hover
       }
     }
   }

@@ -243,17 +243,19 @@ async def chat_stream(message: str, session_id):
         async for chunk in resp:
             chunks.append(chunk)
             yield ServerSentEvent(data=chunk)
-
+        
         full_response = "".join(chunks)
         chat.save_this_round_msg(
             query=message, 
             ai_resp=full_response, 
             session_id=chat.get_curr_session_id()
         )
+        
         yield ServerSentEvent(
-            event="reloadTitle",
-            data=chat.get_curr_session_title(),
-        )
+                event="reloadTitle",
+                data=chat.get_curr_session_title(),
+                id=chat.get_curr_session_id()
+            )
 
     return EventSourceResponse(generate())
 
