@@ -1,5 +1,5 @@
 <template>
-  <div class="chat-container">
+  <div class="chat-container"  :class="{ 'dark': isDarkTheme }">
     <!-- 左侧聊天会话列表 -->
     <div class="chat-sessions">
       <div class="chat-header">
@@ -9,6 +9,23 @@
       <ul>
         <li v-for="session in sessions" :key="session.sessionId" @click="selectSession(session)" :title="session.sessionName">
           <span class="session-name">{{ session.sessionName }}</span>
+
+          <!-- Edit button -->
+          <span class="edit-icon" @click.stop="toggleEditMode(session)">
+            {{ editingSessionId === session.sessionId ? '✓' : '✏️' }}
+          </span>
+
+          <!-- Edit input (only shown in edit mode) -->
+          <input 
+            v-if="editingSessionId === session.sessionId"
+            v-model="tempTitle"
+            @keyup.enter="saveTitle(session)"
+            @keyup.esc="cancelEdit"
+            @blur="saveTitle(session)"
+            class="title-edit-input"
+            ref="titleInput"
+          />
+
         </li>
       </ul>
     </div>
@@ -30,7 +47,13 @@
 </template>
 
 <script setup>
-  import {nextTick, ref, onMounted } from 'vue';
+  import {
+    mdilPencil,
+    mdilCheck,
+  } from "@mdi/light-js";
+
+  import {nextTick, ref, onMounted, watch } from 'vue';
+  import { loadTheme, themeState } from '../helpers.js';
   import {
     getMessages,
     getSessions,
@@ -56,7 +79,17 @@
     return marked(content);
   };
 
+  const isDarkTheme = themeState; //ref(false);
+
+  // Add this watcher to sync theme changes
+  watch(() => document.body.classList.contains('dark'), (isDark) => {
+    isDarkTheme.value = localStorage.getItem("darkTheme"); //isDark;
+  });
+
   onMounted(() => {
+    loadTheme();
+    // isDarkTheme.value = document.body.classList.contains('dark');
+    
     if (chatMessages.value) {
       chatMessages.value.addEventListener('scroll', () => {
         const currentPosition = chatMessages.value.scrollTop + chatMessages.value.clientHeight;
@@ -69,6 +102,48 @@
       });
     }
   });
+
+  // Toggle edit mode
+  const toggleEditMode = (session) => {
+    if (editingSessionId.value === session.sessionId) {
+      // Already editing - save changes
+      saveTitle(session);
+    } else {
+      // Start editing
+      editingSessionId.value = session.sessionId;
+      tempTitle.value = session.sessionName;
+
+      // Focus input after DOM update
+      nextTick(() => {
+        const input = document.querySelector('.title-edit-input');
+        if (input) input.focus();
+      });
+    }
+  };
+
+  // Save edited title
+  const saveTitle = (session) => {
+    if (editingSessionId.value !== session.sessionId) return;
+
+    // Update session name
+    session.sessionName = tempTitle.value.trim() || session.sessionName;
+
+    // Update current session if needed
+    if (currentSession.value?.sessionId === session.sessionId) {
+      currentSession.value.sessionName = session.sessionName;
+    }
+
+    // TODO: Add API call to save to backend
+    // await updateSessionTitle(session.sessionId, session.sessionName);
+
+    // Exit edit mode
+    editingSessionId.value = null;
+  };
+
+  // Cancel editing
+  const cancelEdit = () => {
+    editingSessionId.value = null;
+  };
 
 // import {ElMessage} from "element-plus";
 
@@ -106,6 +181,9 @@
   // 滚动标志
   const isUserScrolledUp = ref(false);
   const lastScrollPosition = ref(0);
+  // 编辑title
+  const editingSessionId = ref(null);
+  const tempTitle = ref('');
 
   // 选择会话
   const selectSession = (session) => {
@@ -368,6 +446,95 @@
 //   }
 // }
 
+// li {
+//   position: relative;
+//   display: flex;
+//   align-items: center;
+//   padding: 10px 30px 10px 10px; // Extra right padding for icon
+
+//   .edit-icon {
+//     position: absolute;
+//     right: 5px;
+//     top: 50%;
+//     transform: translateY(-50%);
+//     cursor: pointer;
+//     opacity: 0.5;
+//     transition: opacity 0.2s;
+//     font-size: 14px;
+//     width: 20px;
+//     height: 20px;
+//     display: flex;
+//     align-items: center;
+//     justify-content: center;
+    
+//     &:hover {
+//       opacity: 1;
+//       background: rgba(0,0,0,0.1);
+//       border-radius: 3px;
+//     }
+//   }
+  
+//   .title-edit-input {
+//     position: absolute;
+//     top: 0;
+//     left: 0;
+//     width: calc(100% - 30px);
+//     height: 100%;
+//     border: 1px solid #007bff;
+//     border-radius: 4px;
+//     padding: 0 8px;
+//     font-size: inherit;
+//     background: white;
+//     box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+//     z-index: 10;
+//   }
+// }
+
+li {
+  position: relative;
+  padding: 10px;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  .session-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .session-name {
+    flex: 1;
+    overflow-x: hidden;
+    overflow-y: hidden;
+    padding-bottom: 2px;
+    scrollbar-width: thin;
+    scrollbar-color: #888 #f0f0f0;
+    transition: all 0.3s ease;
+  }
+
+  .edit-icon {
+    margin-left: 8px;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+    font-size: 14px;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    &:hover {
+      opacity: 1;
+      background: rgba(0,0,0,0.1);
+      border-radius: 3px;
+    }
+  }
+}
+
 .chat-sessions {
   width: 25%;
   background-color: #f4f4f4;
@@ -528,4 +695,45 @@
     }
   }
 }
+
+
+// Dark 模式
+/* 暗黑模式样式 */
+.chat-container.dark {
+  background-color: #1e1e1e;
+  color: #e0e0e0;
+
+  .chat-sessions {
+    background-color: #252525;
+    border-right: 1px solid #444;
+
+    ul li {
+      color: #e0e0e0;
+
+      &:hover {
+        background-color: #333;
+      }
+    }
+  }
+
+  .chat-messages {
+    background-color: #1e1e1e;
+
+    .message pre {
+      background-color: #2d2d2d;
+      color: #e0e0e0;
+    }
+
+    .message.sent pre {
+      background-color: #2a3d2a;
+    }
+  }
+
+  .chat-input textarea {
+    background-color: #2d2d2d;
+    color: #e0e0e0;
+    border-color: #444;
+  }
+}
+
 </style>
