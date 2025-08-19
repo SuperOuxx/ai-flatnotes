@@ -173,3 +173,7 @@ export function getMessages(params = {}) {
 export function  getSessions() {
     return api.get("/api/chat/ai/sessions");
 }
+
+export function updateSessionTitle(sessionId, title) {
+  return api.post(`/api/chat/ai/sessions/${sessionId}`, { title })
+}

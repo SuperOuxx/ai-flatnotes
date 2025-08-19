@@ -94,7 +94,13 @@ class Chat():
             # })
 
     def update_session_title(self, session_id: str, title: str):
-        self.db.update(ChatSession, {"title": title})
+        # self.db.update(ChatSession, {"title": title})
+        session = self.db.get_by_id(ChatSession, id=session_id)
+        if session:
+            session.title = title
+            self.db.save(session)
+            return True
+        return False
 
     def test_chat(self, query):
         return llm.chat(messages=[ChatMessage(role="user", content=query)])

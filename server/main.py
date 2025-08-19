@@ -282,7 +282,22 @@ async def get_messages(sessionId):
         return [{'role': msg.role, 'content': msg.content} for msg in messages]
     return []
 
+@app.post(
+    "/api/chat/ai/sessions/{session_id}",
+    # dependencies=auth_deps,  # Uncomment if authentication is needed
+)
+async def update_session_title(session_id: str, data: dict):
+    """Update a chat session's title"""
+    chat = await get_chat()
+    new_title = data.get('title')
+    if not new_title:
+        raise HTTPException(status_code=400, detail="Title is required")
 
+    # Update the session title
+    if chat.update_session_title(session_id, new_title):
+        return {"status": "success", "new_title": new_title}
+    else:
+        raise HTTPException(status_code=404, detail="Session not found")
 
 # Create a websocket connection
 # @app.websocket("/ws")

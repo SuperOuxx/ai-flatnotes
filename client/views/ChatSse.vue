@@ -57,6 +57,7 @@
   import {
     getMessages,
     getSessions,
+    updateSessionTitle,
   } from "../api.js";
 
   import { marked } from 'marked';
@@ -125,16 +126,29 @@
   const saveTitle = (session) => {
     if (editingSessionId.value !== session.sessionId) return;
 
-    // Update session name
-    session.sessionName = tempTitle.value.trim() || session.sessionName;
+    // Store original title for potential rollback
+    const originalTitle = session.sessionName;
+    const newTitle = tempTitle.value.trim() || originalTitle;
 
-    // Update current session if needed
+    // Optimistically update UI
+    session.sessionName = newTitle;
     if (currentSession.value?.sessionId === session.sessionId) {
-      currentSession.value.sessionName = session.sessionName;
+      currentSession.value.sessionName = newTitle;
     }
 
-    // TODO: Add API call to save to backend
-    // await updateSessionTitle(session.sessionId, session.sessionName);
+    // Call API to save to backend
+    updateSessionTitle(session.sessionId, newTitle)
+      .then(() => {
+        console.log("Session title updated successfully");
+      })
+      .catch(error => {
+        console.error("Failed to update session title:", error);
+        // Revert to original title on error
+        session.sessionName = originalTitle;
+        if (currentSession.value?.sessionId === session.sessionId) {
+          currentSession.value.sessionName = originalTitle;
+        }
+      });
 
     // Exit edit mode
     editingSessionId.value = null;
@@ -418,6 +432,7 @@
   display: flex;
   height: 100vh;
   padding: 0;
+  overflow: hidden; /* 添加这行防止外层滚动条 */
 }
 
 // .chat-sessions {
@@ -541,6 +556,7 @@ li {
   padding: 10px;
   display: flex;          // Add flex container
   flex-direction: column; // Stack children vertically
+  height: 100%; /* 确保高度100% */
   overflow: hidden;       // Hide overflow
 
   .chat-header {
@@ -558,6 +574,7 @@ li {
     overflow-x: hidden;   // Hide horizontal scroll by default
     flex-grow: 1;         // Take remaining space
     white-space: nowrap;  // Prevent text wrapping
+    height: calc(100% - 40px); /* 减去header高度 */
 
     li {
       padding: 10px;
@@ -633,6 +650,8 @@ li {
   width: 75%;
   display: flex;
   flex-direction: column;
+  height: 100%; /* 确保高度100% */
+  overflow: hidden; /* 移除滚动条 */
 }
 
 .chat-messages {
@@ -640,6 +659,7 @@ li {
   overflow-y: auto;
   padding: 10px;
   background-color: #fff;
+  height: calc(100% - 62px); /* 减去输入框高度 */
 
   .message {
     margin-bottom: 10px;
@@ -672,6 +692,7 @@ li {
 .chat-input {
   display: flex;
   padding: 10px;
+  flex-shrink: 0; /* 防止输入框被压缩 */
 
   textarea {
     flex: 1;
