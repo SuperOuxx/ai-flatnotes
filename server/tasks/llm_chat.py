@@ -1,8 +1,9 @@
 from llama_index.llms.openai_like import OpenAILike
-from llama_index.core.base.llms.types import ChatMessage, MessageRole
+from llama_index.core.base.llms.types import ChatMessage, MessageRole, CompletionResponse
 import os
 import openai
 
+from utils.extract_words import choose_longest_word
 from tasks.chat_store import ChatStore
 # from chat_store import ChatStore
 
@@ -43,17 +44,81 @@ def convert_1d_to_2d(lst, extract_field=None, step=2):
         
     return result
 
+from sqlalchemy.orm import Session
+from .models import ChatSession
+from utils.db_util import DbUtils
+
+def llamacpp_restful_req(query: str):
+    import requests
+    import json
+
+    url = "http://localhost:18080/v1/completions"
+    payload = {
+        "prompt": query
+    }
+
+    response = requests.post(url, data=json.dumps(payload))
+    resp_json = json.loads(response.text)
+    return resp_json["choices"][0]["text"]
+
+
 class Chat():
     def __init__(self, user_id, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.user_id = user_id
         self.chat_store = ChatStore(user_id=self.user_id)
+        self.db = DbUtils()
+
+
+    def get_or_create_session(self, title: str, session_id: str = None) -> ChatSession:
+        if session_id:
+            session = self.db.get_by(ChatSession, 
+                id=session_id,
+                user_id=self.user_id
+            )
+            if session:
+                return session[0].id
+
+        # 创建新会话
+        new_session = ChatSession({
+            "user_id": self.user_id,
+            "title": title
+        })
+        return self.db.save(new_session)
+
+
+    def get_all_sessions(self):
+        return self.db.get_sorted(ChatSession, user_id=self.user_id)
+            #                       {
+            #     "user_id": self.user_id
+            # })
+
+    def update_session_title(self, session_id: str, title: str):
+        self.db.update(ChatSession, {"title": title})
 
     def test_chat(self, query):
         return llm.chat(messages=[ChatMessage(role="user", content=query)])
+    
+    def get_curr_session_id(self):
+        return self.curr_session_id
+    
+    def get_curr_session_title(self):
+        return self.curr_session_title
+    
+    async def stream_chat_session(self, session_id,  query: str):
+        title = "New Session"
+        if not session_id:
+            title = llamacpp_restful_req(f"""请给以下[提问]起一个标题，要求10个字以内，简明精炼，只输出标题。\r\n[提问]: {query}\r\n[标题]: /no_think""")
+            title = choose_longest_word(title)
+        
+        # 获取或创建会话
+        self.curr_session_title = title
+        self.curr_session_id = self.get_or_create_session(title, session_id)
+        
+        return self.astream_chat(self.curr_session_id, query=query)
 
-    async def astream_chat(self, query: str):
-        msg_list = self.chat_store.get_chat_history()
+    async def astream_chat(self, session_id,  query: str):
+        msg_list = self.chat_store.get_chat_history(session_id)
         msg_list.append(ChatMessage(role="user", content=query))
         if len(msg_list) > 5:
             msg_list = msg_list[-5: ]
@@ -63,9 +128,9 @@ class Chat():
             # print(chunk.delta, end="")
             yield chunk.delta
 
-    def get_all_chat_history(self, need_raw_str=False):
+    def get_all_chat_history(self, session_id,  need_raw_str=False):
         # print(f"当前存储路径：{self.chat_store.path}")
-        msg_list = self.chat_store.get_chat_history()
+        msg_list = self.chat_store.get_chat_history(session_id)
         # 如果不需要字符串格式的数据，就返回 List[ChatMessage]，否则构造二维字符串列表
         if not need_raw_str:
             return msg_list
@@ -74,10 +139,10 @@ class Chat():
             msg_list2 = convert_1d_to_2d(lst=msg_list, extract_field="content")
             return msg_list2
         
-    def save_this_round_msg(self, query, ai_resp):
+    def save_this_round_msg(self, query, ai_resp, session_id):
         msg_in_this_round = [ChatMessage(role=MessageRole.USER, content=query),
                              ChatMessage(role=MessageRole.ASSISTANT, content=ai_resp)]
-        self.chat_store.save_messages(msg_in_this_round)
+        self.chat_store.save_messages(msg_in_this_round, session_id)
 
     def test_stream_chat(self, query: str):
         msg_list = [ChatMessage(role="user", content=query)]
@@ -86,7 +151,7 @@ class Chat():
             print(chunk.delta, end="")
 
 
-if __name__ == "__main__":
-    c = Chat(user_id="32906025200850466097890969438382775665167326886116576518565743686775373059432")
-    his = c.get_all_chat_history()
-    print(his)
+# if __name__ == "__main__":
+#     c = Chat(user_id="32906025200850466097890969438382775665167326886116576518565743686775373059432")
+#     his = c.get_all_chat_history()
+#     print(his)

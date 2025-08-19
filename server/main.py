@@ -6,6 +6,10 @@ import uuid
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, UploadFile, BackgroundTasks, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
+
+from sse_starlette import EventSourceResponse, ServerSentEvent
+from fastapi.middleware.cors import CORSMiddleware
+
 import redis.asyncio as redis
 
 import api_messages
@@ -30,11 +34,31 @@ app = FastAPI(
     docs_url=global_config.path_prefix + "/docs",
     openapi_url=global_config.path_prefix + "/openapi.json",
 )
+
+# 添加CORS支持
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://127.0.0.1:8080"],  # 允许的前端地址
+    allow_credentials=True,
+    allow_methods=["*"],  # 允许所有HTTP方法
+    allow_headers=["*"],  # 允许所有HTTP头
+)
+
 replace_base_href("client/dist/index.html", global_config.path_prefix)
+
 
 red = redis.Redis(host='192.168.7.183', db=13)
 
+
+user_id = auth.get_user_hash()
 chat_func: Chat = None
+
+async def get_chat():
+    return Chat(user_id=auth.get_user_hash())
+    # global chat_func
+    # if chat_func is None:
+    #     chat_func = Chat(user_id=auth.get_user_hash())
+    # return chat_func
 
 # region UI
 @router.get("/", include_in_schema=False)
@@ -46,8 +70,7 @@ chat_func: Chat = None
 def root(title: str = ""):
     with open("client/dist/index.html", "r", encoding="utf-8") as f:
         html = f.read()
-        user_id = auth.get_user_hash()
-        chat_func = Chat(user_id=user_id)
+        # user_id = auth.get_user_hash()
     return HTMLResponse(content=html)
 
 
@@ -60,8 +83,7 @@ if global_config.auth_type not in [AuthType.NONE, AuthType.READ_ONLY]:
     @router.post("/api/token", response_model=Token)
     def token(data: Login):
         try:
-            user_id = auth.get_user_hash()
-            chat_func = Chat(user_id=user_id)
+            # user_id = auth.get_user_hash()
             return auth.login(data)
         except ValueError:
             raise HTTPException(
@@ -183,7 +205,7 @@ def sse_event_generator():
         time.sleep(3)
 
 async def run_background_task(task_id: str, user_id: str, query: str):
-    resp = await chat_func.astream_chat(query)
+    resp = await chat.astream_chat(query)
     await red.publish(
         f"user:{user_id}",
         json.dumps({"status": "completed", "task_id": task_id, "resp": resp})
@@ -204,76 +226,116 @@ def create_task(
     # return StreamingResponse(sse_event_generator(), media_type="text/event-stream")
 
 
-@app.get("/api/sse")
-async def sse_stream():
-    pubsub = red.pubsub()
-    await pubsub.subscribe(f"user:{auth.get_user_hash()}")
 
-    async def event_generator():
-        try:
-            while True:
-                message = await pubsub.get_message(ignore_subscribe_messages=True)
-                if message:
-                    yield f"data: {message.decode()}\n\n"
-        finally:
-            await pubsub.unsubscribe(f"user:{auth.get_user_hash()}")
-            red.close()
+@app.get(
+    "/api/chat/ai/stream",
+    # dependencies=auth_deps,
+)
+async def chat_stream(message: str, session_id):
+    # user_id = auth.get_user_hash()
+    chat = await get_chat()
 
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
+    resp = await chat.stream_chat_session(session_id, query=message)
+
+    chunks = []
+
+    async def generate():
+        async for chunk in resp:
+            chunks.append(chunk)
+            yield ServerSentEvent(data=chunk)
+        
+        full_response = "".join(chunks)
+        chat.save_this_round_msg(
+            query=message, 
+            ai_resp=full_response, 
+            session_id=chat.get_curr_session_id()
+        )
+        
+        yield ServerSentEvent(
+                event="reloadTitle",
+                data=chat.get_curr_session_title(),
+                id=chat.get_curr_session_id()
+            )
+
+    return EventSourceResponse(generate())
+
+@app.get(
+    "/api/chat/ai/sessions",
+    # dependencies=auth_deps,
+)
+async def get_sessions():
+    # user_id = auth.get_user_hash()
+    chat = await get_chat()
+    sessions = chat.get_all_sessions()
+    return [{"id": s.id, "title": s.title} for s in sessions]
+
+
+@app.get(
+    "/api/chat/ai/messages",
+    # dependencies=auth_deps,
+)
+async def get_messages(sessionId):
+    # user_id = auth.get_user_hash()
+    chat = await get_chat()
+    messages = chat.get_all_chat_history(session_id=sessionId)
+    if messages:
+        return [{'role': msg.role, 'content': msg.content} for msg in messages]
+    return []
+
 
 
 # Create a websocket connection
-@app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    await websocket.accept()
-    user_id = auth.get_user_hash()
-    chat_func = Chat(user_id=user_id)
-    # if not chat_func:
-    #     user_id = auth.get_user_hash()
-    #     chat_func = Chat(user_id=user_id)
-    try:
-        while True:
-            data = await websocket.receive_text()
-            message_data = json.loads(data)
-            if message_data['type'] == 'get_messages':
-                messages = chat_func.get_all_chat_history()
-                if messages:
-                    msg_arr = [{'role': msg.role, 'content': msg.content} for msg in messages]
-                    await websocket.send_text(json.dumps({'msg_arr': msg_arr}))
+# @app.websocket("/ws")
+# async def websocket_endpoint(websocket: WebSocket):
+#     await websocket.accept()
+#     # user_id = auth.get_user_hash()
+#     chat = await get_chat()
+#     # if not chat_func:
+#     #     # user_id = auth.get_user_hash()
+#     #     chat = await get_chat()
+#     try:
+#         while True:
+#             data = await websocket.receive_text()
+#             message_data = json.loads(data)
+#             if message_data['type'] == 'get_messages':
+#                 messages = chat.get_all_chat_history()
+#                 if messages:
+#                     msg_arr = [{'role': msg.role, 'content': msg.content} for msg in messages]
+#                     await websocket.send_text(json.dumps({'msg_arr': msg_arr}))
 
-            if message_data['type'] == 'new_message':
-                new_message = message_data['content']
-                resp = chat_func.astream_chat(query=new_message) # . test_chat(new_message)
-                # await websocket.send_text(json.dumps({'type': 'message_update', 'content': resp, "role": "assistant"}))
-                # async for chunk in resp:
-                #     print(chunk)
+#             if message_data['type'] == 'new_message':
+#                 new_message = message_data['content']
+#                 resp = chat.astream_chat(query=new_message) # . test_chat(new_message)
+#                 # await websocket.send_text(json.dumps({'type': 'message_update', 'content': resp, "role": "assistant"}))
+#                 # async for chunk in resp:
+#                 #     print(chunk)
                 
-                #     await websocket.send_text(json.dumps({'type': 'message_update', 'content': chunk, "role": "assistant"}))
+#                 #     await websocket.send_text(json.dumps({'type': 'message_update', 'content': chunk, "role": "assistant"}))
                 
-                async for chunk in resp:
-                    await websocket.send_text(json.dumps({
-                        'type': 'message_part',
-                        'content': chunk,
-                        "role": "assistant"
-                    }))
-                # 发送完成信号
-                await websocket.send_text(json.dumps({
-                    'type': 'message_complete',
-                    "role": "assistant"
-                }))
-                # 保存完整响应（需在Chat类中实现获取最终内容的方法）
-                full_response = "".join([chunk for chunk in resp])
-                chat_func.save_this_round_msg(query=new_message, ai_resp=full_response)
-                # chat_func.save_this_round_msg(query=new_message, ai_resp=resp.message.content)
+#                 async for chunk in resp:
+#                     await websocket.send_text(json.dumps({
+#                         'type': 'message_part',
+#                         'content': chunk,
+#                         "role": "assistant"
+#                     }))
+#                 # 发送完成信号
+#                 await websocket.send_text(json.dumps({
+#                     'type': 'message_complete',
+#                     "role": "assistant"
+#                 }))
+#                 # 保存完整响应（需在Chat类中实现获取最终内容的方法）
+#                 full_response = "".join([chunk for chunk in resp])
+#                 chat.save_this_round_msg(query=new_message, ai_resp=full_response)
+#                 # chat.save_this_round_msg(query=new_message, ai_resp=resp.message.content)
 
-            # if message_data['type'] == 'clear_messages':
-            #     messages_collection.delete_many({})
-            #     messages_collection.insert_one({'role': 'system', 'content': 'You are a helpful assistant'})
-            #     messages = get_messages()
-            #     await websocket.send_text(json.dumps({'type': 'message_update', 'content': messages[1:]}))
+#             # if message_data['type'] == 'clear_messages':
+#             #     messages_collection.delete_many({})
+#             #     messages_collection.insert_one({'role': 'system', 'content': 'You are a helpful assistant'})
+#             #     messages = get_messages()
+#             #     await websocket.send_text(json.dumps({'type': 'message_update', 'content': messages[1:]}))
 
-    except WebSocketDisconnect:
-        print("Client disconnected")
+#     except WebSocketDisconnect:
+#         print("Client disconnected")
 
 @router.get(
     "/api/tags",

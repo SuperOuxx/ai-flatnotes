@@ -11,8 +11,6 @@ import os
 from local_path import CHAT_STORE_PATH
 
 
-
-
 # 历史对话的存储路径
 # CHAT_STORE_PATH = "./chat_store/[user_id].json"
 
@@ -53,9 +51,10 @@ class ChatStore():
         )
         self.user_id = user_id
 
-    def get_chat_history(self) -> List[ChatMessage]:
+    def get_chat_history(self, session_id) -> List[ChatMessage]:
         # VectorStoreIndex.from_vector_store()
-        return self.chat_store.get_messages(key = self.user_id)
+        return self.chat_store.get_messages(key = f"{self.user_id}/{session_id}")
     
-    def save_messages(self, msg_list: List[ChatMessage]):
-        self.chat_store.set_messages(self.user_id, messages=msg_list)
+    def save_messages(self, msg_list: List[ChatMessage], session_id):
+        for msg in msg_list:
+            self.chat_store.add_message(f"{self.user_id}/{session_id}", message=msg)

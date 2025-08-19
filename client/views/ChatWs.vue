@@ -1,4 +1,4 @@
-<script>
+<!-- <script>
 import ChatContent from '../components/ChatContent.vue';
 import InputRow from '../components/InputRow.vue';
 import ReconnectingWebSocket from 'reconnecting-websocket';
@@ -114,4 +114,4 @@ export default {
     max-width: 1000px;
     overflow: auto;
 }
-</style>
+</style> -->
