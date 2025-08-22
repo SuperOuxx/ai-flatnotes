@@ -13,9 +13,14 @@ llama-index-embeddings-huggingface
 # llama-index-llms-llama-cpp
 llama-index-llms-openai-like
 llama-index-storage-chat-store-postgres
-llama-index-vector-stores-postgres
-llama-index-storage-docstore-postgres
+# llama-index-vector-stores-postgres
+# llama-index-storage-docstore-postgres
+# llama-index-vector-stores-elasticsearch
 
-llama-cpp-python==0.3.16
+llama-index-vector-stores-milvus
+FlagEmbedding
 
-websockets
+
+# llama-cpp-python==0.3.16
+
+# websockets
