@@ -1,9 +1,10 @@
 from llama_index.llms.openai_like import OpenAILike
 from llama_index.core.base.llms.types import ChatMessage, MessageRole, CompletionResponse
 import os
-import openai
+import requests
+import json
 
-from utils.extract_words import choose_longest_word
+from utils.extract_words import choose_longest_word, extract_all_words
 from tasks.chat_store import ChatStore
 # from chat_store import ChatStore
 
@@ -49,9 +50,6 @@ from .models import ChatSession
 from utils.db_util import DbUtils
 
 def llamacpp_restful_req(query: str):
-    import requests
-    import json
-
     url = "http://localhost:18080/v1/completions"
     payload = {
         "prompt": query
@@ -61,6 +59,9 @@ def llamacpp_restful_req(query: str):
     resp_json = json.loads(response.text)
     return resp_json["choices"][0]["text"]
 
+def complete(query: str):
+    rst = llm.complete(prompt=query)
+    return rst.text
 
 class Chat():
     def __init__(self, user_id, *args, **kwargs):
@@ -89,9 +90,6 @@ class Chat():
 
     def get_all_sessions(self):
         return self.db.get_sorted(ChatSession, user_id=self.user_id)
-            #                       {
-            #     "user_id": self.user_id
-            # })
 
     def update_session_title(self, session_id: str, title: str):
         # self.db.update(ChatSession, {"title": title})
@@ -111,7 +109,7 @@ class Chat():
     def get_curr_session_title(self):
         return self.curr_session_title
     
-    async def stream_chat_session(self, session_id,  query: str):
+    async def stream_chat_session(self, session_id, query: str, ext_content: str):
         title = "New Session"
         if not session_id:
             title = llamacpp_restful_req(f"""请给以下[提问]起一个标题，要求10个字以内，简明精炼，只输出标题。\r\n[提问]: {query}\r\n[标题]: /no_think""")
@@ -120,10 +118,14 @@ class Chat():
         # 获取或创建会话
         self.curr_session_title = title
         self.curr_session_id = self.get_or_create_session(title, session_id)
-        
-        return self.astream_chat(self.curr_session_id, query=query)
 
-    async def astream_chat(self, session_id,  query: str):
+        return self.astream_chat(self.curr_session_id, query=query, ext_content=ext_content)
+
+    async def astream_chat(self, session_id,  query: str, ext_content: str):
+        if ext_content:
+            print(ext_content)
+            query = query + "\r\n以下是外部检索到的相关信息，请结合它去回答。\r\n[外部信息]: " + ext_content
+
         msg_list = self.chat_store.get_chat_history(session_id)
         msg_list.append(ChatMessage(role="user", content=query))
         if len(msg_list) > 5:

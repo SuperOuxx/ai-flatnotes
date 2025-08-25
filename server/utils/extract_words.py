@@ -34,6 +34,7 @@ def choose_longest_word(text):
       return ""
     return max(words, key=len)
 
+
 if __name__ == "__main__":
     # 示例用法
     text1 = "Hello, world!  This is a test."

@@ -32,3 +32,19 @@ class BgeM3SparseEmbeddingFunction(BaseSparseEmbeddingFunction):
         for k in raw_output:
             result[int(k)] = raw_output[k]
         return result
+    
+from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+from llama_index.core import Settings
+# pip install sentence-transformers[onnx]
+
+# loads BAAI/bge-small-en-v1.5 with the onnx backend
+embed_model = HuggingFaceEmbedding(
+    model_name=get_env("EMBEDDING_MODEL_PATH"),
+    device="cpu",
+    backend="onnx",
+    model_kwargs={
+        "provider": "CPUExecutionProvider"
+    },  # For ONNX, you can specify the provider, see https://sbert.net/docs/sentence_transformer/usage/efficiency.html
+)
+
+Settings.embed_model = embed_model

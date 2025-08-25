@@ -49,7 +49,7 @@
             <path :d="mdilBluetooth" fill="currentColor"/>
           </svg>
         </button>
-        <button title="知识库" @click="toggleRAG"  :class="{ 'active': enableRAG }">
+        <button title="知识库" @click="toggleKbSearch"  :class="{ 'active': enableKbSearch }">
           <svg viewBox="0 0 24 24" width="24" height="24">
             <path :d="mdilBook" fill="currentColor"/>
           </svg>
@@ -180,41 +180,19 @@
     editingSessionId.value = null;
   };
 
-  // 添加状态变量
+  // 添加聊天工具的状态变量
   const enableWebSearch = ref(false);
-  const enableRAG = ref(false);
+  const enableKbSearch = ref(false);
 
   // 添加切换方法
   const toggleWebSearch = () => {
     enableWebSearch.value = !enableWebSearch.value;
-    // 这里可以添加实际功能逻辑
   };
 
-  const toggleRAG = () => {
-    enableRAG.value = !enableRAG.value;
+  const toggleKbSearch = () => {
+    enableKbSearch.value = !enableKbSearch.value;
     // 这里可以添加实际功能逻辑
   };
-
-// import {ElMessage} from "element-plus";
-
-// 初始化MarkdownIt实例
-// const md = new MarkdownIt({
-//   html: true,
-//   linkify: true,
-//   typographer: true,
-//   highlight: (str, lang) => {
-//     if (lang && hljs.getLanguage(lang)) {
-//       try {
-//         return '<pre class="hljs"><code>' +
-//           hljs.highlight(lang, str, true).value +
-//           '</code></pre>';
-//       } catch (__) {
-//       }
-//     }
-
-//     return '<pre class="hljs"><code>' + md.utils.escapeHtml(str) + '</code></pre>';
-//   }
-// });
 
   // 引用聊天消息容器
   const chatMessages = ref(null);
@@ -251,26 +229,6 @@
     currentSession.value = {};
   };
 
-  // 新增刷新会话列表函数
-// const refreshSessions = async () => {
-//   try {
-//     const res = await getSessions();
-//     sessions.value = res.data.map(session => ({
-//       sessionId: session.id,
-//       sessionName: session.title
-//     }));
-
-//     // 更新当前会话的标题
-//     const updatedSession = sessions.value.find(
-//       s => s.sessionId === currentSession.value.sessionId
-//     );
-//     if (updatedSession) {
-//       currentSession.value.sessionName = updatedSession.sessionName;
-//     }
-//   } catch (error) {
-//     console.error("刷新会话列表失败:", error);
-//   }
-// };
 
   // 发送消息
   const sendMessage = () => {
@@ -311,7 +269,7 @@
     const encodedValue = encodeURIComponent(value);
     const encodedSessionId = currentSession.value?.sessionId ? encodeURIComponent(currentSession.value.sessionId) : '';
 
-    eventSource.value = new EventSource(`${apiBaseUrl}?message=${encodedValue}&session_id=${encodedSessionId}`);
+    eventSource.value = new EventSource(`${apiBaseUrl}?message=${encodedValue}&session_id=${encodedSessionId}&need_web=${enableWebSearch.value}&need_kb=${enableKbSearch.value}`);
     eventSource.value.onmessage = function (event) {
       
       try {

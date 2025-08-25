@@ -18,7 +18,12 @@ llama-index-storage-chat-store-postgres
 # llama-index-vector-stores-elasticsearch
 
 llama-index-vector-stores-milvus
+
+sentence-transformers[onnx]
+
 FlagEmbedding
+
+langextract==1.0.8
 
 
 # llama-cpp-python==0.3.16

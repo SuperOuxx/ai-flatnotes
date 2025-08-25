@@ -21,8 +21,9 @@ from global_config import AuthType, GlobalConfig, GlobalConfigResponseModel
 from helpers import replace_base_href
 from notes.base import BaseNotes
 from notes.models import Note, NoteCreate, NoteUpdate, SearchResult
+from utils.extract_words import extract_all_words
 from tasks.models import TaskCreate
-from tasks.llm_chat import Chat
+from tasks.llm_chat import Chat, llamacpp_restful_req, complete
 
 global_config = GlobalConfig()
 auth: BaseAuth = global_config.load_auth()
@@ -226,16 +227,43 @@ def create_task(
     # return StreamingResponse(sse_event_generator(), media_type="text/event-stream")
 
 
+def extract_keywords(query: str):
+    prompt = f"""请从以下[提问]提炼出5个以内的关键词。\r\n[提问]: {query}\r\n[关键词]: /no_think"""
+    keywords = complete(prompt)
+    return keywords.split("</think>", 1)[-1].strip()
+    # return " ".join(extract_all_words(keywords))
+
+from tools.bocha import rerank
+from tools.tencent import search_tencent
+
+def search_web(query: str) -> str:
+    # keywords = extract_keywords(query)
+    # print(f"关键词 = {keywords}")
+    tencent_results = search_tencent(query) # search_tencent(keywords + " " + query)
+    # tavily_results = search_tavily(query)
+    # final_rst = tavily_results + tencent_results
+    # documents = [item.get("summary", "") for item in final_rst]
+    # reranked_results = rerank(query, documents, final_rst)
+
+    documents = [item.get("summary", "") for item in tencent_results]
+    reranked_results = rerank(query, documents, tencent_results)
+    return "\n".join([r.get("summary") for r in reranked_results]), reranked_results
+
+
 
 @app.get(
     "/api/chat/ai/stream",
     # dependencies=auth_deps,
 )
-async def chat_stream(message: str, session_id):
+async def chat_stream(message: str, session_id, need_web: bool, need_kb: bool):
     # user_id = auth.get_user_hash()
     chat = await get_chat()
 
-    resp = await chat.stream_chat_session(session_id, query=message)
+    web_content_str = None
+    web_rst = None
+    if need_web:
+        web_content_str, web_rst = search_web(message)
+    resp = await chat.stream_chat_session(session_id, query=message, ext_content=web_content_str)
 
     chunks = []
 

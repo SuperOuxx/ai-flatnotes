@@ -24,6 +24,7 @@ class HybridSearch:
         self.storage_context = StorageContext.from_defaults(vector_store=self.vector_store)
 
         self.kb_file_path = get_env("KB_FILE_PATH")
+        self.set_vect_index()
 
     def load_kb_docs(self):
         # Load documents
@@ -32,14 +33,25 @@ class HybridSearch:
         )
         return loader.load_data()
 
-    def set_index_from_docs(self, documents):
-        self.index = VectorStoreIndex.from_documents(
+    def set_files_index(self, documents):
+        self.files_index = VectorStoreIndex.from_documents(
             documents, storage_context=self.storage_context
         )
 
-    async def aquery(self, query: str):
-        docs = self.load_kb_docs()
-        self.set_index_from_docs(docs)
+    def set_vect_index(self):
+        self.vector_index = VectorStoreIndex.from_vector_store(vector_store=self.vector_store)
+
+    async def aquery(self, query: str, from_files: bool):
+        if from_files:
+            docs = self.load_kb_docs()
+            self.set_files_index(docs)
+            query_engine = self.files_index.as_query_engine(streaming=True,
+                vector_store_query_mode="hybrid", similarity_top_k=5
+            )
+        else:
+            query_engine = self.vector_index.as_query_engine(streaming=True,
+                vector_store_query_mode="hybrid", similarity_top_k=5
+            )
 
         # Setup streaming query engine with custom prompt
         qa_prompt_tmpl_str = (
@@ -53,14 +65,12 @@ class HybridSearch:
         )
         qa_prompt_tmpl = PromptTemplate(qa_prompt_tmpl_str)
 
-        self.query_engine = self.index.as_query_engine(streaming=True,
-            vector_store_query_mode="hybrid", similarity_top_k=5
-        )
-        self.query_engine.update_prompts(
+        
+        query_engine.update_prompts(
             {"response_synthesizer:text_qa_template": qa_prompt_tmpl}
         )
 
-        return self.query_engine.aquery(query)
+        return query_engine.aquery(query)
         # 调用方 这样用：
             # for chunk in streaming_response.response_gen:
             #     answer += chunk
