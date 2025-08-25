@@ -37,9 +37,25 @@
     <!-- 右侧聊天窗口 -->
     <div class="chat-window">
       <div class="chat-messages" ref="chatMessages">
-        <div v-for="message in messages" :key="message" class="message"
-             :class="{'sent': message.type===1}">
-          <pre v-html="message.msg"></pre>
+        <div v-for="(message, index) in messages" :key="index" class="message"
+          :class="{
+              'sent': message.type===1,
+              'web-results': message.type===3
+            }">
+          <pre v-if="message.type === 1" v-html="message.msg"></pre>
+
+          <!-- Web results display -->
+          <div v-else-if="message.type === 3" class="web-results-container">
+            <div v-if="message.results.length > 0" class="web-results-header">检索结果：</div>
+            <div v-for="(result, idx) in message.results" :key="idx" class="web-result-item">
+              <a :href="result.url" target="_blank" class="web-result-link">
+                {{ result.title }}
+              </a>
+            </div>
+          </div>
+
+          <!-- AI response -->
+          <pre v-else-if="message.type === 2" v-html="message.msg"></pre>
         </div>
       </div>
 
@@ -251,10 +267,17 @@
       msg: newMessage.value,
       type: 1
     });
+    // 添加一个占位消息用于显示检索结果
+    messages.value.push({
+      type: 3,
+      results: []
+    });
     messages.value.push({
       msg: '',
       type: 2
     });
+
+    const webResultIndex = messages.value.length - 2; // 检索结果消息的索引
     const aiMessageIndex = messages.value.length - 1; // 记录AI消息索引
 
     newMessage.value = '';
@@ -307,6 +330,21 @@
     eventSource.value.onclose = function (event) {
       console.log("事件关闭:", event);
     };
+
+    eventSource.value.addEventListener("webResults", (event) => {
+      const results = JSON.parse(event.data);
+
+      // Create a special message for web results
+      // messages.value.push({
+      //   type: 3, // New type for web results
+      //   results: results
+      // });
+      // 更新占位的检索结果消息
+      messages.value[webResultIndex].results = results;
+
+      scrollToBottom();
+    });
+
     eventSource.value.addEventListener("reloadTitle", async (event) => {
 
       const res = await getSessions(); // 调用后端接口获取会话列表
@@ -429,75 +467,32 @@
   overflow: hidden; /* 添加这行防止外层滚动条 */
 }
 
-// .chat-sessions {
-//   width: 25%;
-//   background-color: #f4f4f4;
-//   padding: 10px;
+.web-results-container {
+  background-color: #f0f7ff;
+  border-left: 4px solid #4a90e2;
+  padding: 10px;
+  border-radius: 4px;
+  margin: 10px 0;
+}
 
-//   .chat-header {
-//     text-align: center;
-//     line-height: 30px;
-//     width: 100%;
-//   }
+.web-results-header {
+  font-weight: bold;
+  margin-bottom: 8px;
+  color: #2c3e50;
+}
 
-//   ul {
-//     list-style-type: none;
-//     padding: 0;
+.web-result-item {
+  margin: 5px 0;
+}
 
-//     li {
-//       padding: 10px;
-//       cursor: pointer;
+.web-result-link {
+  color: #1a73e8;
+  text-decoration: none;
 
-//       &:hover {
-//         background-color: #ddd;
-//       }
-//     }
-//   }
-// }
-
-// li {
-//   position: relative;
-//   display: flex;
-//   align-items: center;
-//   padding: 10px 30px 10px 10px; // Extra right padding for icon
-
-//   .edit-icon {
-//     position: absolute;
-//     right: 5px;
-//     top: 50%;
-//     transform: translateY(-50%);
-//     cursor: pointer;
-//     opacity: 0.5;
-//     transition: opacity 0.2s;
-//     font-size: 14px;
-//     width: 20px;
-//     height: 20px;
-//     display: flex;
-//     align-items: center;
-//     justify-content: center;
-    
-//     &:hover {
-//       opacity: 1;
-//       background: rgba(0,0,0,0.1);
-//       border-radius: 3px;
-//     }
-//   }
-  
-//   .title-edit-input {
-//     position: absolute;
-//     top: 0;
-//     left: 0;
-//     width: calc(100% - 30px);
-//     height: 100%;
-//     border: 1px solid #007bff;
-//     border-radius: 4px;
-//     padding: 0 8px;
-//     font-size: inherit;
-//     background: white;
-//     box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
-//     z-index: 10;
-//   }
-// }
+  &:hover {
+    text-decoration: underline;
+  }
+}
 
 li {
   position: relative;
@@ -804,6 +799,21 @@ li {
         }
       }
     }
+  }
+}
+
+.chat-container.dark {
+  .web-results-container {
+    background-color: #2d3748;
+    border-left-color: #63b3ed;
+  }
+
+  .web-results-header {
+    color: #e2e8f0;
+  }
+
+  .web-result-link {
+    color: #90cdf4;
   }
 }
 

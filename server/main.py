@@ -263,11 +263,29 @@ async def chat_stream(message: str, session_id, need_web: bool, need_kb: bool):
     web_rst = None
     if need_web:
         web_content_str, web_rst = search_web(message)
+
+    # Add this section to send web results
+    async def send_web_results():
+        if web_rst:
+            # Format web results for SSE
+            web_results = [
+                {"title": r.get("title"), "url": r.get("url")}
+                for r in web_rst
+            ]
+            yield ServerSentEvent(
+                event="webResults",
+                data=json.dumps(web_results)
+            )
+
     resp = await chat.stream_chat_session(session_id, query=message, ext_content=web_content_str)
 
     chunks = []
 
     async def generate():
+        # Send web results first
+        async for event in send_web_results():
+            yield event
+            
         async for chunk in resp:
             chunks.append(chunk)
             yield ServerSentEvent(data=chunk)
