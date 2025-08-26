@@ -63,6 +63,18 @@ def complete(query: str):
     rst = llm.complete(prompt=query)
     return rst.text
 
+
+def extract_keywords(query: str):
+    prompt = f"""请从以下[内容]提炼出5个关键词，总输出30个字以内，无需过多解释，只需要输出关键词。\r\n[内容]: {query}\r\n[关键词]: """
+    keywords = complete(prompt)
+    # return keywords.split("</think>", 1)[-1].strip()
+    return " ".join(extract_all_words(keywords.split("</think>", 1)[-1].strip()))
+
+def summary(query: str):
+    prompt = f"""请总结以下[内容]，要求20个字以内，简明精炼。\r\n[内容]: {query}\r\n[总结]: """
+    keywords = complete(prompt)
+    return keywords.split("</think>", 1)[-1].strip()
+
 class Chat():
     def __init__(self, user_id, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -99,9 +111,22 @@ class Chat():
             self.db.save(session)
             return True
         return False
+    
+    def update_session_summarize(self, session_id: str, summarize: str):
+        # self.db.update(ChatSession, {"title": title})
+        session = self.db.get_by_id(ChatSession, id=session_id)
+        if session:
+            session.summarize = summarize
+            self.db.save(session)
+            return True
+        return False
 
-    def test_chat(self, query):
-        return llm.chat(messages=[ChatMessage(role="user", content=query)])
+    def get_session_summarize(self, session_id: str):
+        if session_id:
+            session = self.db.get_by_id(ChatSession, id=session_id)
+            if session:
+                return session.summarize
+        return ""
     
     def get_curr_session_id(self):
         return self.curr_session_id
@@ -128,8 +153,8 @@ class Chat():
 
         msg_list = self.chat_store.get_chat_history(session_id)
         msg_list.append(ChatMessage(role="user", content=query))
-        if len(msg_list) > 5:
-            msg_list = msg_list[-5: ]
+        if len(msg_list) > 10:
+            msg_list = msg_list[-10: ]
 
         response = await llm.astream_chat(msg_list)
         async for chunk in response:
@@ -151,6 +176,8 @@ class Chat():
         msg_in_this_round = [ChatMessage(role=MessageRole.USER, content=query),
                              ChatMessage(role=MessageRole.ASSISTANT, content=ai_resp)]
         self.chat_store.save_messages(msg_in_this_round, session_id)
+        summarize = extract_keywords(ai_resp.split("</think>", 1)[-1].strip())
+        self.update_session_summarize(session_id, summarize)
 
     def test_stream_chat(self, query: str):
         msg_list = [ChatMessage(role="user", content=query)]

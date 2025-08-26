@@ -51,6 +51,7 @@ class ChatSession(Base):
     user_id = Column(String, nullable=False)
     
     title = Column(String, nullable=True)  # 会话标题
+    summarize = Column(String, nullable=True)  # 会话总结，用于给上下游信息
 
 
 from sqlalchemy import create_engine

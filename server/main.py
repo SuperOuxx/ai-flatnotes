@@ -21,9 +21,8 @@ from global_config import AuthType, GlobalConfig, GlobalConfigResponseModel
 from helpers import replace_base_href
 from notes.base import BaseNotes
 from notes.models import Note, NoteCreate, NoteUpdate, SearchResult
-from utils.extract_words import extract_all_words
 from tasks.models import TaskCreate
-from tasks.llm_chat import Chat, llamacpp_restful_req, complete
+from tasks.llm_chat import Chat
 
 global_config = GlobalConfig()
 auth: BaseAuth = global_config.load_auth()
@@ -227,12 +226,6 @@ def create_task(
     # return StreamingResponse(sse_event_generator(), media_type="text/event-stream")
 
 
-def extract_keywords(query: str):
-    prompt = f"""请从以下[提问]提炼出5个以内的关键词。\r\n[提问]: {query}\r\n[关键词]: /no_think"""
-    keywords = complete(prompt)
-    return keywords.split("</think>", 1)[-1].strip()
-    # return " ".join(extract_all_words(keywords))
-
 from tools.bocha import rerank
 from tools.tencent import search_tencent
 
@@ -262,30 +255,18 @@ async def chat_stream(message: str, session_id, need_web: bool, need_kb: bool):
     web_content_str = None
     web_rst = None
     if need_web:
-        web_content_str, web_rst = search_web(message)
-
-    # Add this section to send web results
-    async def send_web_results():
-        if web_rst:
-            # Format web results for SSE
-            web_results = [
-                {"title": r.get("title"), "url": r.get("url")}
-                for r in web_rst
-            ]
-            yield ServerSentEvent(
-                event="webResults",
-                data=json.dumps(web_results)
-            )
+        summarize = chat.get_session_summarize(session_id)
+        web_content_str, web_rst = search_web(message + " " + summarize)
 
     resp = await chat.stream_chat_session(session_id, query=message, ext_content=web_content_str)
 
-    chunks = []
-
     async def generate():
-        # Send web results first
-        async for event in send_web_results():
-            yield event
-            
+        chunks = []
+        if web_rst:
+            web_content = "<br>网络检索结果：</br>" + "\r\n".join([f"""<u><font color="orange">[{web["title"]}]({web["url"]})</font></u>""" for web in web_rst])
+            chunks = [web_content]
+            yield ServerSentEvent(data=web_content)
+
         async for chunk in resp:
             chunks.append(chunk)
             yield ServerSentEvent(data=chunk)
@@ -294,12 +275,15 @@ async def chat_stream(message: str, session_id, need_web: bool, need_kb: bool):
         chat.save_this_round_msg(
             query=message, 
             ai_resp=full_response, 
-            session_id=chat.get_curr_session_id()
+            session_id=chat.get_curr_session_id(),
         )
         
         yield ServerSentEvent(
                 event="reloadTitle",
-                data=chat.get_curr_session_title(),
+                data=json.dumps({
+                    "sessionId": chat.get_curr_session_id(),
+                    "title": chat.get_curr_session_title()
+                }),
                 id=chat.get_curr_session_id()
             )
 
