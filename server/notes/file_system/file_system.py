@@ -47,8 +47,11 @@ class FileSystemNotes(BaseNotes):
         r"(?:(?<=^)|(?<=\s))#[a-zA-Z0-9_-]+(?=\s|$)"
     )
 
-    def __init__(self):
-        self.storage_path = get_env("FLATNOTES_PATH", mandatory=True)
+    def __init__(self, storage_path=None):
+        if storage_path is None:
+            self.storage_path = get_env("FLATNOTES_PATH", mandatory=True)
+        else:
+            self.storage_path = storage_path
         if not os.path.exists(self.storage_path):
             raise NotADirectoryError(
                 f"'{self.storage_path}' is not a valid directory."
@@ -119,7 +122,7 @@ class FileSystemNotes(BaseNotes):
         term = self._pre_process_search_term(term)
         with self.index.searcher() as searcher:
             # Parse Query
-            if term == "*":
+            if term == "":
                 query = Every()
             else:
                 parser = MultifieldParser(

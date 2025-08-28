@@ -29,6 +29,7 @@ import {
   mdilNoteMultiple,
   mdilPlusCircle,
   mdilMessageProcessing,
+  mdilBookPlus,
 } from "@mdi/light-js";
 import { computed, ref } from "vue";
 import { RouterLink, useRouter } from "vue-router";
@@ -65,7 +66,7 @@ const menuItems = [
       router.push({
         name: "search",
         query: {
-          [params.searchTerm]: "*",
+          [params.searchTerm]: "",
           [params.sortBy]: searchSortOptions.title,
         },
       }),
@@ -76,10 +77,14 @@ const menuItems = [
     command: () =>
       router.push({
         name: "chat",
-        // query: {
-        //   [params.searchTerm]: "*",
-        //   [params.sortBy]: searchSortOptions.title,
-        // },
+      }),
+  },
+  {
+    label: "Knowledge",
+    icon: mdilBookPlus,
+    command: () =>
+      router.push({
+        name: "knowledge",
       }),
   },
   {

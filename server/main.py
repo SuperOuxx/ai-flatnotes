@@ -27,6 +27,7 @@ from tasks.llm_chat import Chat
 global_config = GlobalConfig()
 auth: BaseAuth = global_config.load_auth()
 note_storage: BaseNotes = global_config.load_note_storage()
+knowledge_storage: BaseNotes = global_config.load_knowledge_storage()
 attachment_storage: BaseAttachments = global_config.load_attachment_storage()
 auth_deps = [Depends(auth.authenticate)] if auth else []
 router = APIRouter()

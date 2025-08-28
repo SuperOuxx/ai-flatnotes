@@ -3,6 +3,8 @@ from enum import Enum
 
 from helpers import CustomBaseModel, get_env
 from logger import logger
+from notes.file_system import FileSystemNotes
+from notes.base import BaseNotes
 
 
 class GlobalConfig:
@@ -15,6 +17,8 @@ class GlobalConfig:
         self.quick_access_sort: str = self._quick_access_sort()
         self.quick_access_limit: int = self._quick_access_limit()
         self.path_prefix: str = self._load_path_prefix()
+        # 添加知识库路径
+        self.kb_path = get_env("FLATNOTES_KB_PATH", mandatory=True)
 
     def load_auth(self):
         if self.auth_type in (AuthType.NONE, AuthType.READ_ONLY):
@@ -24,10 +28,11 @@ class GlobalConfig:
 
             return LocalAuth()
 
-    def load_note_storage(self):
-        from notes.file_system import FileSystemNotes
-
+    def load_note_storage(self) -> BaseNotes:
         return FileSystemNotes()
+    
+    def load_knowledge_storage(self) -> BaseNotes:
+        return FileSystemNotes(self.kb_path)
 
     def load_attachment_storage(self):
         from attachments.file_system import FileSystemAttachments
