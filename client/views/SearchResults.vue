@@ -1,7 +1,12 @@
 <template>
   <div class="flex h-full max-w-[700px] flex-col">
     <!-- Search Input -->
-    <SearchInput :initialSearchTerm="props.searchTerm" class="mb-2" />
+    <SearchInput 
+        :initialSearchTerm="props.searchTerm" 
+        class="mb-2" 
+        @search="handleSearchInSearchResults"
+    
+    />
 
     <LoadingIndicator ref="loadingIndicator" class="flex-1">
       <!-- Sort By -->
@@ -56,7 +61,11 @@ import Tag from "../components/Tag.vue";
 import { params, searchSortOptions } from "../constants.js";
 import SearchInput from "../partials/SearchInput.vue";
 
-const emit = defineEmits(['note-selected']);
+const emit = defineEmits(['note-selected', 'search']);
+
+function handleSearchInSearchResults(term) {
+  emit('search', term);
+}
 
 const props = defineProps({
   searchTerm: String,
@@ -126,20 +135,20 @@ const menuItems = [
   {
     label: "Sort By: Score",
     command: () => {
-      updateSortByParam(searchSortOptions.score);
+      // 直接更新 sortBy 值
+      sortBy.value = searchSortOptions.score;
     },
   },
-
   {
     label: "Sort By: Title",
     command: () => {
-      updateSortByParam(searchSortOptions.title);
+      sortBy.value = searchSortOptions.title;
     },
   },
   {
     label: "Sort By: Last Modified",
     command: () => {
-      updateSortByParam(searchSortOptions.lastModified);
+      sortBy.value = searchSortOptions.lastModified;
     },
   },
 ];

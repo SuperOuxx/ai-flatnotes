@@ -6,6 +6,7 @@
         :searchTerm="searchTerm" 
         :sortBy="sortBy"
         @note-selected="handleNoteSelected"
+        @search="handleSearch"
       />
     </div>
     
@@ -41,5 +42,10 @@ provide('workspaceState', {
 
 function handleNoteSelected(title) {
   selectedNoteTitle.value = title;
+}
+
+// 处理搜索事件
+function handleSearch(term) {
+  searchTerm.value = term;
 }
 </script>

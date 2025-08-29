@@ -47,7 +47,7 @@
 import { mdilMagnify } from "@mdi/light-js";
 import { useToast } from "primevue/usetoast";
 import { ref, watch } from "vue";
-import { useRouter } from "vue-router";
+// import { useRouter } from "vue-router";
 
 import { apiErrorHandler, getTags } from "../api.js";
 import IconLabel from "../components/IconLabel.vue";
@@ -62,7 +62,7 @@ const props = defineProps({
 const emit = defineEmits(["search"]);
 
 const input = ref();
-const router = useRouter();
+// const router = useRouter();
 const searchTerm = ref(props.initialSearchTerm);
 const toast = useToast();
 let tags = null;
@@ -97,6 +97,7 @@ function keydownHandler(event) {
   // Tag Menu Closed
   else if (event.key === "Enter") {
     search();
+    // event.preventDefault(); // 添加这行阻止默认行为
   }
 }
 
@@ -106,15 +107,7 @@ function tagChosen(tag) {
 }
 
 function search() {
-  if (searchTerm.value) {
-    router.push({
-      name: "search",
-      query: { [constants.params.searchTerm]: searchTerm.value },
-    });
-    emit("search");
-  } else {
-    toast.add(getToastOptions("Please enter a search term.", "Error", "error"));
-  }
+  emit("search", searchTerm.value);
 }
 
 function stateChangeHandler() {

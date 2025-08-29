@@ -44,11 +44,11 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { themeState } from '../helpers.js';
-import { 
-  getKnowledgeFiles,
-  uploadKnowledgeFile,
-  getKnowledgeFileContent
-} from "../api.js";
+// import { 
+//   getKnowledgeFiles,
+//   uploadKnowledgeFile,
+//   getKnowledgeFileContent
+// } from "../api.js";
 import Note from './Note.vue';
 
 const isDarkTheme = themeState;
