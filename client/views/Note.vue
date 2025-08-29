@@ -145,6 +145,8 @@ import { authTypes } from "../constants.js";
 import { useGlobalStore } from "../globalStore.js";
 import { getToastOptions } from "../helpers.js";
 
+const spaceType = ref(localStorage.getItem('spaceType') || 'note');
+
 const props = defineProps({
   noteTitle: String // Changed from title
 });
@@ -169,8 +171,6 @@ const toastEditor = ref();
 const unsavedChanges = ref(false);
 
 function init() {
-  // Use noteTitle prop instead of route param
-  const title = props.noteTitle;
   // Return if we already have the note e.g. When we rename a note, the route prop would change but we’d already have the note.
   if (props.noteTitle && props.noteTitle == note.value.title) {
     return;
@@ -178,7 +178,7 @@ function init() {
 
   loadingIndicator.value.setLoading();
   if (props.noteTitle) {
-    getNote(props.noteTitle)
+    getNote(props.noteTitle, spaceType.value)
       .then((data) => {
         note.value = data;
         loadingIndicator.value.setLoaded();
@@ -240,7 +240,7 @@ function deleteHandler() {
 }
 
 function deleteConfirmedHandler() {
-  deleteNote(note.value.title)
+  deleteNote(note.value.title, spaceType.value) // Add spaceType parameter
     .then(() => {
       toast.add(getToastOptions("Note deleted ✓", "Success", "success"));
       // router.push({ name: "home" });
@@ -279,7 +279,7 @@ function saveHandler(close = false) {
 }
 
 function saveNew(newTitle, newContent, close = false) {
-  createNote(newTitle, newContent)
+  createNote(newTitle, newContent, spaceType.value) // Add spaceType parameter
     .then((data) => {
       clearDraft();
       note.value = data;
@@ -304,7 +304,7 @@ function saveExisting(newTitle, newContent, close = false) {
     return;
   }
 
-  updateNote(note.value.title, newTitle, newContent)
+  updateNote(note.value.title, newTitle, newContent, spaceType.value) // Add spaceType parameter
     .then((data) => {
       clearDraft();
       note.value = data;
@@ -441,19 +441,27 @@ function contentChangedHandler() {
 }
 
 // Drafts
+
+function getDraftKey() {
+  if (isNewNote.value) {
+    return `draft_${spaceType.value}_new`;
+  }
+  return `draft_${spaceType.value}_${note.value.title}`;
+}
+
 function saveDraft() {
   const content = toastEditor.value.getMarkdown();
   if (content) {
-    localStorage.setItem(note.value.title, content);
+    localStorage.setItem(getDraftKey(), content);
   }
 }
 
 function clearDraft() {
-  localStorage.removeItem(note.value.title);
+  localStorage.removeItem(getDraftKey());
 }
 
 function loadDraft() {
-  return localStorage.getItem(note.value.title);
+  return localStorage.getItem(getDraftKey());
 }
 
 // Keyboard Shortcuts

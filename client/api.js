@@ -65,7 +65,7 @@ export async function getToken(username, password, totp) {
   }
 }
 
-export async function getNotes(term, sort, order, limit) {
+export async function getNotes(term, sort, order, limit, spaceType = 'note') {
   try {
     const response = await api.get("api/search", {
       params: {
@@ -73,7 +73,8 @@ export async function getNotes(term, sort, order, limit) {
         sort: sort,
         order: order,
         limit: limit,
-      },
+        spaceType: spaceType  // Add this
+      }
     });
     return response.data.map((note) => new SearchResult(note));
   } catch (response) {
@@ -81,11 +82,13 @@ export async function getNotes(term, sort, order, limit) {
   }
 }
 
-export async function createNote(title, content) {
+// Add to createNote
+export async function createNote(title, content, spaceType = 'note') {
   try {
     const response = await api.post("api/notes", {
       title: title,
       content: content,
+      spaceType: spaceType  // Add this
     });
     return new Note(response.data);
   } catch (response) {
@@ -93,20 +96,25 @@ export async function createNote(title, content) {
   }
 }
 
-export async function getNote(title) {
+// Add to getNote
+export async function getNote(title, spaceType = 'note') {
   try {
-    const response = await api.get(`api/notes/${encodeURIComponent(title)}`);
+    const response = await api.get(`api/notes/${encodeURIComponent(title)}`, {
+      params: { spaceType }  // Add this
+    });
     return new Note(response.data);
   } catch (response) {
     return Promise.reject(response);
   }
 }
 
-export async function updateNote(title, newTitle, newContent) {
+// Add to updateNote
+export async function updateNote(title, newTitle, newContent, spaceType = 'note') {
   try {
     const response = await api.patch(`api/notes/${encodeURIComponent(title)}`, {
       newTitle: newTitle,
       newContent: newContent,
+      spaceType: spaceType  // Add this
     });
     return new Note(response.data);
   } catch (response) {
@@ -114,17 +122,23 @@ export async function updateNote(title, newTitle, newContent) {
   }
 }
 
-export async function deleteNote(title) {
+// Add to deleteNote
+export async function deleteNote(title, spaceType = 'note') {
   try {
-    await api.delete(`api/notes/${encodeURIComponent(title)}`);
+    await api.delete(`api/notes/${encodeURIComponent(title)}`, {
+      params: { spaceType }  // Add this
+    });
   } catch (response) {
     return Promise.reject(response);
   }
 }
 
-export async function getTags() {
+// Add to getTags
+export async function getTags(spaceType = 'note') {
   try {
-    const response = await api.get("api/tags");
+    const response = await api.get("api/tags", {
+      params: { spaceType }  // Add this
+    });
     return response.data;
   } catch (response) {
     return Promise.reject(response);

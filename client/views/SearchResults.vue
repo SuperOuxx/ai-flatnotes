@@ -92,7 +92,11 @@ const sortByName = computed(() => {
 
 function init() {
   loadingIndicator.value.setLoading();
-  getNotes(props.searchTerm)
+  // Map numeric sort to string value
+  // const sortString = sortMapping[props.sortBy] || 'score';
+
+  getNotes(props.searchTerm, 'score', 'desc', null, localStorage.getItem("spaceType"))
+  // getNotes(props.searchTerm)
     .then((data) => {
       results.value = sortResults(data);
       if (results.value.length > 0) {

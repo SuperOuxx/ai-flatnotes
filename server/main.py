@@ -106,10 +106,10 @@ if global_config.auth_type not in [AuthType.NONE, AuthType.READ_ONLY]:
     dependencies=auth_deps,
     response_model=Note,
 )
-def get_note(title: str):
+def get_note(title: str, spaceType: str):
     """Get a specific note."""
     try:
-        return note_storage.get(title)
+        return kb_storage_dict[spaceType].get(title)
     except ValueError:
         raise HTTPException(
             status_code=400, detail=api_messages.invalid_note_title
@@ -130,6 +130,7 @@ if global_config.auth_type != AuthType.READ_ONLY:
         """Create a new note."""
         try:
             return note_storage.create(note)
+            # return kb_storage_dict[spaceType].create(note)
         except ValueError:
             raise HTTPException(
                 status_code=400,
@@ -146,9 +147,9 @@ if global_config.auth_type != AuthType.READ_ONLY:
         dependencies=auth_deps,
         response_model=Note,
     )
-    def patch_note(title: str, data: NoteUpdate):
+    def patch_note(title: str, data: NoteUpdate, spaceType: str):
         try:
-            return note_storage.update(title, data)
+            return kb_storage_dict[spaceType].update(title, data)
         except ValueError:
             raise HTTPException(
                 status_code=400,
@@ -167,9 +168,9 @@ if global_config.auth_type != AuthType.READ_ONLY:
         dependencies=auth_deps,
         response_model=None,
     )
-    def delete_note(title: str):
+    def delete_note(title: str, spaceType: str):
         try:
-            note_storage.delete(title)
+            kb_storage_dict[spaceType].delete(title)
         except ValueError:
             raise HTTPException(
                 status_code=400,
@@ -193,42 +194,13 @@ def search(
     sort: Literal["score", "title", "lastModified"] = "score",
     order: Literal["asc", "desc"] = "desc",
     limit: int = None,
+    spaceType: str = "note"
 ):
     """Perform a full text search on all notes."""
     if sort == "lastModified":
         sort = "last_modified"
-    return note_storage.search(term, sort=sort, order=order, limit=limit)
+    return kb_storage_dict[spaceType].search(term, sort=sort, order=order, limit=limit)
 
-from fastapi.responses import StreamingResponse
-import time
-
-
-def sse_event_generator():
-    while True:
-        # SSE 格式，每条数据必须以 "\n\n" 结尾
-        yield f"data: 通知来了 - {time.strftime('%X')}\n\n"
-        time.sleep(3)
-
-async def run_background_task(task_id: str, user_id: str, query: str):
-    resp = await chat.astream_chat(query)
-    await red.publish(
-        f"user:{user_id}",
-        json.dumps({"status": "completed", "task_id": task_id, "resp": resp})
-    )
-    red.close()
-    
-@router.post(
-        "/api/task",
-        dependencies=auth_deps,
-    )
-def create_task(
-    task: TaskCreate,
-    background_tasks: BackgroundTasks
-    ):
-    task_id = f"task_{auth.get_user_hash()}_{uuid.uuid4()}"
-    background_tasks.add_task(run_background_task, task_id, auth.get_user_hash())
-    return {"task_id": task_id, "user_id": auth.get_user_hash()}
-    # return StreamingResponse(sse_event_generator(), media_type="text/event-stream")
 
 
 from tools.bocha import rerank
@@ -392,9 +364,9 @@ async def update_session_title(session_id: str, data: dict):
     dependencies=auth_deps,
     response_model=List[str],
 )
-def get_tags():
+def get_tags(spaceType: str = "note"):
     """Get a list of all indexed tags."""
-    return note_storage.get_tags()
+    return kb_storage_dict[spaceType].get_tags()
 
 
 # endregion
