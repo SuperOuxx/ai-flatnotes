@@ -19,24 +19,25 @@
       <div
         v-for="result in results"
         class="mb-4 cursor-pointer rounded px-2 py-1 hover:bg-theme-background-elevated"
-        @click="handleNoteClick(result.title)"
       >
-        <!-- Title and Tags -->
-        <div>
-        <span v-html="result.titleHighlightsOrTitle" class="mr-2"></span>
-        <Tag v-for="tag in result.tagMatches" :tag="tag" class="mr-1" />
-        </div>
-        <!-- Last Modified and Content Highlights -->
-        <div>
-        <span class="text-theme-text-muted">{{
-            result.lastModifiedAsString
-        }}</span>
-        <span v-if="result.contentHighlights"> - </span>
-        <span
-            v-html="result.contentHighlights"
-            class="text-theme-text-muted"
-        ></span>
-        </div>
+        <RouterLink :to="{ name: 'note', params: { title: result.title } }">
+          <!-- Title and Tags -->
+          <div>
+            <span v-html="result.titleHighlightsOrTitle" class="mr-2"></span>
+            <Tag v-for="tag in result.tagMatches" :tag="tag" class="mr-1" />
+          </div>
+          <!-- Last Modified and Content Highlights -->
+          <div>
+            <span class="text-theme-text-muted">{{
+              result.lastModifiedAsString
+            }}</span>
+            <span v-if="result.contentHighlights"> - </span>
+            <span
+              v-html="result.contentHighlights"
+              class="text-theme-text-muted"
+            ></span>
+          </div>
+        </RouterLink>
       </div>
     </LoadingIndicator>
   </div>
@@ -45,7 +46,7 @@
 <script setup>
 import { useToast } from "primevue/usetoast";
 import { computed, onMounted, ref, watch } from "vue";
-// import { useRouter } from "vue-router";
+import { useRouter } from "vue-router";
 
 import { mdiMagnify, mdiSort } from "@mdi/js";
 import { apiErrorHandler, getNotes } from "../api.js";
@@ -55,8 +56,6 @@ import PrimeMenu from "../components/PrimeMenu.vue";
 import Tag from "../components/Tag.vue";
 import { params, searchSortOptions } from "../constants.js";
 import SearchInput from "../partials/SearchInput.vue";
-
-const emit = defineEmits(['note-selected']);
 
 const props = defineProps({
   searchTerm: String,
@@ -68,7 +67,7 @@ const props = defineProps({
 
 const loadingIndicator = ref();
 const results = ref([]);
-// const router = useRouter();
+const router = useRouter();
 const sortMenu = ref();
 const toast = useToast();
 
@@ -112,15 +111,15 @@ function reSortResults() {
   results.value = sortResults(results.value);
 }
 
-// function updateSortByParam(sortBy) {
-//   router.push({
-//     name: "search",
-//     query: {
-//       [params.searchTerm]: props.searchTerm,
-//       [params.sortBy]: sortBy,
-//     },
-//   });
-// }
+function updateSortByParam(sortBy) {
+  router.push({
+    name: "search",
+    query: {
+      [params.searchTerm]: props.searchTerm,
+      [params.sortBy]: sortBy,
+    },
+  });
+}
 
 const menuItems = [
   {
@@ -151,11 +150,6 @@ function toggleSortMenu(event) {
 watch(() => props.searchTerm, init);
 watch(() => props.sortBy, reSortResults);
 onMounted(init);
-
-function handleNoteClick(title) {
-  emit('note-selected', title);
-}
-
 </script>
 
 <style>

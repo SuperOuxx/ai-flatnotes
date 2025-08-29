@@ -80,6 +80,14 @@ const menuItems = [
       }),
   },
   {
+    label: "Workspace",
+    icon: mdilBookPlus,
+    command: () =>
+      router.push({
+        name: "workspace",
+      }),
+  },
+  {
     label: "Knowledge",
     icon: mdilBookPlus,
     command: () =>

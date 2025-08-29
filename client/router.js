@@ -43,6 +43,11 @@ const router = createRouter({
       component: () => import("./views/ChatSse.vue"),
     },
     {
+      path: '/workspace',
+      name: 'workspace',
+      component: () => import('./views/WorkspaceView.vue')
+    },
+    {
       path: "/knowledge",
       name: "knowledge",
       component: () => import("./views/Knowledge.vue"),

@@ -124,7 +124,7 @@ import { mdilContentSave, mdilDelete } from "@mdi/light-js";
 import Mousetrap from "mousetrap";
 import { useToast } from "primevue/usetoast";
 import { computed, nextTick, onMounted, ref, watch } from "vue";
-import { useRouter } from "vue-router";
+// import { useRouter } from "vue-router";
 
 import {
   apiErrorHandler,
@@ -146,7 +146,7 @@ import { useGlobalStore } from "../globalStore.js";
 import { getToastOptions } from "../helpers.js";
 
 const props = defineProps({
-  title: String,
+  noteTitle: String // Changed from title
 });
 
 const canModify = computed(
@@ -158,25 +158,27 @@ const globalStore = useGlobalStore();
 const isSaveChangesModalVisible = ref(false);
 const isDeleteModalVisible = ref(false);
 const isDraftModalVisible = ref(false);
-const isNewNote = computed(() => !props.title);
+const isNewNote = computed(() => !props.noteTitle);
 const loadingIndicator = ref();
 const note = ref({});
 const reservedFilenameCharacters = /[<>:"/\\|?*]/;
-const router = useRouter();
+// const router = useRouter();
 const newTitle = ref();
 const toast = useToast();
 const toastEditor = ref();
 const unsavedChanges = ref(false);
 
 function init() {
+  // Use noteTitle prop instead of route param
+  const title = props.noteTitle;
   // Return if we already have the note e.g. When we rename a note, the route prop would change but we’d already have the note.
-  if (props.title && props.title == note.value.title) {
+  if (props.noteTitle && props.noteTitle == note.value.title) {
     return;
   }
 
   loadingIndicator.value.setLoading();
-  if (props.title) {
-    getNote(props.title)
+  if (props.noteTitle) {
+    getNote(props.noteTitle)
       .then((data) => {
         note.value = data;
         loadingIndicator.value.setLoaded();
@@ -241,7 +243,7 @@ function deleteConfirmedHandler() {
   deleteNote(note.value.title)
     .then(() => {
       toast.add(getToastOptions("Note deleted ✓", "Success", "success"));
-      router.push({ name: "home" });
+      // router.push({ name: "home" });
     })
     .catch((error) => {
       apiErrorHandler(error, toast);
@@ -281,16 +283,16 @@ function saveNew(newTitle, newContent, close = false) {
     .then((data) => {
       clearDraft();
       note.value = data;
-      router
-        .push({
-          name: "note",
-          params: { title: note.value.title },
-        })
-        .then(() => {
-          // Wait for the route to be updated before setting edit mode to false
-          // as the route is used to determine the action.
-          noteSaveSuccess(close);
-        });
+      // router
+      //   .push({
+      //     name: "note",
+      //     params: { title: note.value.title },
+      //   })
+      //   .then(() => {
+      //     // Wait for the route to be updated before setting edit mode to false
+      //     // as the route is used to determine the action.
+      //     noteSaveSuccess(close);
+      //   });
     })
     .catch(noteSaveFailure);
 }
@@ -306,7 +308,7 @@ function saveExisting(newTitle, newContent, close = false) {
     .then((data) => {
       clearDraft();
       note.value = data;
-      router.replace({ name: "note", params: { title: note.value.title } });
+      // router.replace({ name: "note", params: { title: note.value.title } });
       noteSaveSuccess(close);
     })
     .catch(noteSaveFailure);
@@ -350,7 +352,7 @@ function closeNote() {
   clearDraft();
   editMode.value = false;
   if (isNewNote.value) {
-    router.push({ name: "home" });
+    // router.push({ name: "home" });
   } else {
     editMode.value = false;
   }
@@ -524,6 +526,10 @@ function isContentChanged() {
   );
 }
 
-watch(() => props.title, init);
+// watch(() => props.title, init);
+watch(() => props.noteTitle, (newTitle) => {
+  if (newTitle) init();
+});
+
 onMounted(init);
 </script>
