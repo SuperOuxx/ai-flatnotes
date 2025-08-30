@@ -16,6 +16,7 @@
 
       <SearchResults 
         :searchTerm="searchTerm" 
+        :spaceType="spaceType"
         :sortBy="sortBy"
         @note-selected="handleNoteSelected"
         @search="handleSearch"

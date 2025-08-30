@@ -147,9 +147,10 @@ if global_config.auth_type != AuthType.READ_ONLY:
         dependencies=auth_deps,
         response_model=Note,
     )
-    def patch_note(title: str, data: NoteUpdate, spaceType: str):
+    def patch_note(title: str, data: NoteUpdate):
         try:
-            return kb_storage_dict[spaceType].update(title, data)
+            space_type = data.space_type or 'note'
+            return kb_storage_dict[space_type].update(title, data)
         except ValueError:
             raise HTTPException(
                 status_code=400,

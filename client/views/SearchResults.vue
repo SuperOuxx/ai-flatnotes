@@ -69,6 +69,7 @@ function handleSearchInSearchResults(term) {
 
 const props = defineProps({
   searchTerm: String,
+  spaceType: String,
   sortBy: {
     type: Number,
     default: searchSortOptions.score,
@@ -95,7 +96,7 @@ function init() {
   // Map numeric sort to string value
   // const sortString = sortMapping[props.sortBy] || 'score';
 
-  getNotes(props.searchTerm, 'score', 'desc', null, localStorage.getItem("spaceType"))
+  getNotes(props.searchTerm, 'score', 'desc', null, props.spaceType)
   // getNotes(props.searchTerm)
     .then((data) => {
       results.value = sortResults(data);
@@ -163,6 +164,8 @@ function toggleSortMenu(event) {
 
 watch(() => props.searchTerm, init);
 watch(() => props.sortBy, reSortResults);
+// 2. 添加 spaceType 的 watch
+watch(() => props.spaceType, init);
 onMounted(init);
 
 function handleNoteClick(title) {

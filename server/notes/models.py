@@ -33,6 +33,8 @@ class NoteUpdate(CustomBaseModel):
         AfterValidator(is_valid_filename),
     ] = Field(None)
     new_content: Optional[str] = Field(None)
+    space_type: Optional[str] = Field(None)
+
 
 
 class SearchResult(CustomBaseModel):
