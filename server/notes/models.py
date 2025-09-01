@@ -36,7 +36,6 @@ class NoteUpdate(CustomBaseModel):
     space_type: Optional[str] = Field(None)
 
 
-
 class SearchResult(CustomBaseModel):
     title: str
     last_modified: float

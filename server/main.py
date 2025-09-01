@@ -236,7 +236,7 @@ async def chat_stream(message: str, session_id, need_web: bool, need_kb: bool):
         summarize = chat.get_session_summarize(session_id)
         web_content_str, web_rst = search_web(message + " " + summarize)
 
-    resp = await chat.stream_chat_session(session_id, query=message, ext_content=web_content_str)
+    resp = await chat.stream_chat_session(session_id, query=message, ext_content=web_content_str, need_kb=need_kb)
 
     async def generate():
         chunks = []
@@ -461,4 +461,4 @@ app.mount(
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="127.0.0.1", port=8000)

@@ -6,6 +6,7 @@ from llama_index.core import (
     PromptTemplate
     )
 
+from llama_index.core.vector_stores.types import VectorStoreQueryMode
 from rag.embed import BgeM3SparseEmbeddingFunction
 from helpers import get_env
 
@@ -23,7 +24,7 @@ class HybridSearch:
 
         self.storage_context = StorageContext.from_defaults(vector_store=self.vector_store)
 
-        self.kb_file_path = get_env("KB_FILE_PATH")
+        self.kb_file_path = get_env("FLATNOTES_KB_PATH")
         self.set_vect_index()
 
     def load_kb_docs(self):
@@ -35,22 +36,23 @@ class HybridSearch:
 
     def set_files_index(self, documents):
         self.files_index = VectorStoreIndex.from_documents(
-            documents, storage_context=self.storage_context
+            documents, 
+            # storage_context=self.storage_context
         )
 
     def set_vect_index(self):
         self.vector_index = VectorStoreIndex.from_vector_store(vector_store=self.vector_store)
 
-    async def aquery(self, query: str, from_files: bool):
+    async def aquery(self, query: str, from_files: bool=True):
         if from_files:
             docs = self.load_kb_docs()
             self.set_files_index(docs)
             query_engine = self.files_index.as_query_engine(streaming=True,
-                vector_store_query_mode="hybrid", similarity_top_k=5
+                vector_store_query_mode=VectorStoreQueryMode.MMR, similarity_top_k=5
             )
         else:
             query_engine = self.vector_index.as_query_engine(streaming=True,
-                vector_store_query_mode="hybrid", similarity_top_k=5
+                vector_store_query_mode=VectorStoreQueryMode.HYBRID, similarity_top_k=5
             )
 
         # Setup streaming query engine with custom prompt
@@ -70,7 +72,5 @@ class HybridSearch:
             {"response_synthesizer:text_qa_template": qa_prompt_tmpl}
         )
 
-        return query_engine.aquery(query)
-        # 调用方 这样用：
-            # for chunk in streaming_response.response_gen:
-            #     answer += chunk
+        response = await query_engine.aquery(query)
+        return response

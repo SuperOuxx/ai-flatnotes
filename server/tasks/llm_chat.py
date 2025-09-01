@@ -4,6 +4,7 @@ import os
 import requests
 import json
 
+from rag.hybrid_search import HybridSearch
 from utils.extract_words import choose_longest_word, extract_all_words
 from tasks.chat_store import ChatStore
 # from chat_store import ChatStore
@@ -19,6 +20,8 @@ llm = OpenAILike(
     is_chat_model=True,
     is_function_calling_model=False,
 )
+
+rag = HybridSearch()
 
 
 def convert_1d_to_2d(lst, extract_field=None, step=2):  
@@ -134,7 +137,7 @@ class Chat():
     def get_curr_session_title(self):
         return self.curr_session_title
     
-    async def stream_chat_session(self, session_id, query: str, ext_content: str):
+    async def stream_chat_session(self, session_id, query: str, ext_content: str, need_kb: bool=False):
         title = "New Session"
         if not session_id:
             title = llamacpp_restful_req(f"""请给以下[提问]起一个标题，要求10个字以内，简明精炼，只输出标题。\r\n[提问]: {query}\r\n[标题]: /no_think""")
@@ -144,9 +147,9 @@ class Chat():
         self.curr_session_title = title
         self.curr_session_id = self.get_or_create_session(title, session_id)
 
-        return self.astream_chat(self.curr_session_id, query=query, ext_content=ext_content)
+        return self.astream_chat(self.curr_session_id, query=query, ext_content=ext_content, need_kb=need_kb)
 
-    async def astream_chat(self, session_id,  query: str, ext_content: str):
+    async def astream_chat(self, session_id,  query: str, ext_content: str, need_kb: bool=False):
         if ext_content:
             print(ext_content)
             query = query + "\r\n以下是外部检索到的相关信息，请结合它去回答。\r\n[外部信息]: " + ext_content
@@ -156,10 +159,16 @@ class Chat():
         if len(msg_list) > 10:
             msg_list = msg_list[-10: ]
 
-        response = await llm.astream_chat(msg_list)
-        async for chunk in response:
-            # print(chunk.delta, end="")
-            yield chunk.delta
+        if need_kb:
+            response = await rag.aquery(query=query)
+            async for chunk in response.response_gen:
+                # print(chunk, end="")
+                yield chunk
+        else:
+            response = await llm.astream_chat(msg_list)
+            async for chunk in response:
+                # print(chunk.delta, end="")
+                yield chunk.delta
 
     def get_all_chat_history(self, session_id,  need_raw_str=False):
         # print(f"当前存储路径：{self.chat_store.path}")
