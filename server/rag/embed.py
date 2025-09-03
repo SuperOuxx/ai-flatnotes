@@ -41,10 +41,9 @@ from llama_index.core import Settings
 embed_model = HuggingFaceEmbedding(
     model_name=get_env("EMBEDDING_MODEL_PATH"),
     device="cpu",
-    backend="onnx",
-    model_kwargs={
-        "provider": "CPUExecutionProvider"
-    },  # For ONNX, you can specify the provider, see https://sbert.net/docs/sentence_transformer/usage/efficiency.html
+    # model_kwargs={
+    #     "provider": "CPUExecutionProvider"
+    # },  # For ONNX, you can specify the provider, see https://sbert.net/docs/sentence_transformer/usage/efficiency.html
 )
 
 Settings.embed_model = embed_model

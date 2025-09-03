@@ -58,7 +58,7 @@ red = redis.Redis(host='192.168.7.183', db=13)
 user_id = auth.get_user_hash()
 chat_func: Chat = None
 
-async def get_chat():
+async def get_chat() -> Chat:
     return Chat(user_id=auth.get_user_hash())
     # global chat_func
     # if chat_func is None:
@@ -204,23 +204,6 @@ def search(
 
 
 
-from tools.bocha import rerank
-from tools.tencent import search_tencent
-
-def search_web(query: str) -> str:
-    # keywords = extract_keywords(query)
-    # print(f"关键词 = {keywords}")
-    tencent_results = search_tencent(query) # search_tencent(keywords + " " + query)
-    # tavily_results = search_tavily(query)
-    # final_rst = tavily_results + tencent_results
-    # documents = [item.get("summary", "") for item in final_rst]
-    # reranked_results = rerank(query, documents, final_rst)
-
-    documents = [item.get("summary", "") for item in tencent_results]
-    reranked_results = rerank(query, documents, tencent_results)
-    return "\n".join([r.get("summary") for r in reranked_results]), reranked_results
-
-
 
 @app.get(
     "/api/chat/ai/stream",
@@ -230,20 +213,24 @@ async def chat_stream(message: str, session_id, need_web: bool, need_kb: bool):
     # user_id = auth.get_user_hash()
     chat = await get_chat()
 
+    kb_rst = None
+    if need_kb:
+        summarize = chat.get_session_summarize(session_id)
+
     web_content_str = None
     web_rst = None
-    if need_web:
-        summarize = chat.get_session_summarize(session_id)
-        web_content_str, web_rst = search_web(message + " " + summarize)
+    # if need_web:
+    #     summarize = chat.get_session_summarize(session_id)
+    #     web_content_str, web_rst = search_web(message + " " + summarize)
 
-    resp = await chat.stream_chat_session(session_id, query=message, ext_content=web_content_str, need_kb=need_kb)
+    resp = await chat.stream_chat_session(session_id, query=message, need_web=need_web, need_kb=need_kb)
 
     async def generate():
         chunks = []
-        if web_rst:
-            web_content = "<br>网络检索结果：</br>" + "\r\n".join([f"""<u><font color="orange">[{web["title"]}]({web["url"]})</font></u>""" for web in web_rst])
-            chunks = [web_content]
-            yield ServerSentEvent(data=web_content)
+        # if web_rst:
+        #     web_content = "<br>网络检索结果：</br>" + "\r\n".join([f"""<u><font color="orange">[{web["title"]}]({web["url"]})</font></u>""" for web in web_rst])
+        #     chunks = [web_content]
+        #     yield ServerSentEvent(data=web_content)
 
         async for chunk in resp:
             chunks.append(chunk)
