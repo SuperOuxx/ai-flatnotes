@@ -156,7 +156,10 @@ class Chat():
         if len(msg_list) > 10:
             msg_list = msg_list[-10: ]
 
-        if need_kb:
+        if need_kb or need_web:
+            summarize_keywords = self.get_session_summarize(session_id=session_id)
+            if summarize_keywords:
+                msg_list.append(ChatMessage(role="user", content=f"[聊天记录关键词]: {summarize_keywords}"))
             response_obj = await rag.aquery(original_query=query, hist_list=msg_list, need_web=need_web, need_kb=need_kb)
             async for chunk in response_obj:
                 yield chunk.delta

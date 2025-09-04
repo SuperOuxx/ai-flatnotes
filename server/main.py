@@ -10,8 +10,6 @@ from fastapi.staticfiles import StaticFiles
 from sse_starlette import EventSourceResponse, ServerSentEvent
 from fastapi.middleware.cors import CORSMiddleware
 
-import redis.asyncio as redis
-
 import api_messages
 from attachments.base import BaseAttachments
 from attachments.models import AttachmentCreateResponse
@@ -51,8 +49,6 @@ app.add_middleware(
 
 replace_base_href("client/dist/index.html", global_config.path_prefix)
 
-
-red = redis.Redis(host='192.168.7.183', db=13)
 
 
 user_id = auth.get_user_hash()

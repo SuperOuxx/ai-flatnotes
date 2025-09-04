@@ -16,6 +16,7 @@ import pymilvus
 
 from rag.embed import BgeM3SparseEmbeddingFunction
 from helpers import get_env
+from utils.extract_words import extract_first_quoted_string
 
 
 class HybridSearch:
@@ -28,13 +29,13 @@ class HybridSearch:
         self.files_index = None
         self.vector_index = None
 
-        connections.connect(uri=get_env("MILVUS_URI"), token=get_env("MILVUS_TOKEN"))
         self.vector_store = None
 
         for i in range(3):
             if self.vector_store:
                 break
             try:
+                connections.connect(uri=get_env("MILVUS_URI"), token=get_env("MILVUS_TOKEN"))
                 self.vector_store = MilvusVectorStore(
                     uri=get_env("MILVUS_URI"),
                     token=get_env("MILVUS_TOKEN"),
@@ -203,28 +204,30 @@ class HybridSearch:
                 web_results
             )
 
-
+import datetime
+today = datetime.datetime.today()
+curr_year = today.year
 
 # 3. 片段整理与查询重写
 def refine_query_with_context(original_query: str, context_nodes: List[dict]) -> str:
-    """根据知识库片段重写查询"""
+    """根据聊天历史重写查询"""
     # 提取关键信息
     context_summary = "\n".join(
-        f"【片段{i+1}】{node.content[:200]}..." 
-        for i, node in enumerate(context_nodes[-2:])
+        f"[片段{i + 1}] {node.role} : {node.content}"
+        for i, node in enumerate(context_nodes[-3:])
     )
     
     # 重写查询的提示词
     prompt = f"""
-    原始查询：{original_query}
+    [原始查询]:{original_query}
     
-    相关知识库片段：
+    [聊天历史]:
     {context_summary}
     
     请根据以上内容优化原始查询，使其更适合进行联网检索：
     1. 保留核心查询意图
-    2. 添加必要的限定词（如最新年份、专业术语）
-    3. 移除已在知识库中找到的信息
+    2. 添加必要的限定词（如判断是时效性高的需求，时间必须为{curr_year}年；专业术语）
+    3. 移除已在[聊天历史]中找到的信息
     4. 输出格式：直接返回优化后的查询语句
     """
     
@@ -232,10 +235,11 @@ def refine_query_with_context(original_query: str, context_nodes: List[dict]) ->
     refined_query = Settings.llm.complete(prompt).text.split("</think>", 1)[-1].strip()
     
     # 清理输出，确保只返回查询语句
-    if "优化后查询" in refined_query:
-        refined_query = refined_query.split("优化后的查询：")[-1]
+    if "优化后" in refined_query:
+        refined_query = extract_first_quoted_string(refined_query.split("优化后的查询")[-1])
     
     print(f"🔄 查询重写结果: {refined_query}")
+    print(f"🔄 聊天记录的总结: {context_nodes[-1]}")
     return refined_query
 
 # 4. 联网检索工具
@@ -269,12 +273,14 @@ async def generate_final_response(
         f"【知识库片段 {i+1}】{node['content']}\n(来源: {node['source']}, 置信度: {node['score']:.2f})\n" 
         for i, node in enumerate(knowledge_nodes)
     )
+    knowledge_content = f"""### 知识库内容：\n{knowledge_content}""" if knowledge_content else ""
     # "<br>网络检索结果：</br>" + "\r\n".join([f"""<u><font color="orange">[{web["title"]}]({web["url"]})</font></u>""" for web in web_rst])
     
     web_content = "\n".join(
         f"""【网络结果 {i+1}】[{res["title"]}]({res["url"]}))\n""" 
         for i, res in enumerate(web_results)
     )
+    web_content = f"""### 网络检索结果：\n{web_content}""" if web_content else ""
     
     # 生成最终响应的提示词
     prompt = f"""
@@ -284,14 +290,12 @@ async def generate_final_response(
     ### 用户原始查询：
     {original_query}
     
-    ### 知识库内容：
-    {knowledge_content if knowledge_content else "无相关内容"}
+    {knowledge_content}
     
-    ### 网络检索结果：
-    {web_content if web_content else "无相关内容"}
+    {web_content}
     
     ## 回答要求：
-    1. 优先使用知识库内容作为主要依据
+    1. 如果存在知识库内容，优先使用知识库内容作为主要依据
     2. 网络结果仅用于补充知识库的不足或更新信息
     3. 当内容冲突时，标注来源并说明判断依据
     4. 在回答末尾添加"参考资料"部分，格式：

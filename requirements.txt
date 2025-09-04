@@ -6,7 +6,6 @@ python-jose ==3.4.0
 pyotp ==2.9.0
 qrcode ==8.0
 python-multipart ==0.0.20
-redis==6.2.0
 sse-starlette==3.0.2
 llama_index
 llama-index-embeddings-huggingface
@@ -23,7 +22,7 @@ sentence-transformers[onnx]
 
 FlagEmbedding
 
-langextract==1.0.8
+# langextract==1.0.8
 
 
 # llama-cpp-python==0.3.16

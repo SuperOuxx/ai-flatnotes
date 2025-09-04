@@ -34,6 +34,20 @@ def choose_longest_word(text):
       return ""
     return max(words, key=len)
 
+def extract_first_quoted_string(s: str) -> str:
+    """提取字符串中第一个被成对双引号包裹的字符串"""
+    start = s.find('"')
+    if start == -1:
+        return None  # 没有左引号
+    
+    # 从左引号的下一个字符开始查找右引号
+    end = s.find('"', start + 1)
+    if end == -1:
+        return None  # 没有右引号
+    
+    # 返回两个引号之间的内容
+    return s[start + 1:end]
+
 
 if __name__ == "__main__":
     # 示例用法
