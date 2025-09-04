@@ -56,12 +56,17 @@ from utils.db_util import DbUtils
 def llamacpp_restful_req(query: str):
     url = "http://localhost:18080/v1/completions"
     payload = {
+        "model": "qwen3",
         "prompt": query
     }
 
     response = requests.post(url, data=json.dumps(payload))
     resp_json = json.loads(response.text)
     return resp_json["choices"][0]["text"]
+
+# async def llamacpp_restful_req(query: str):
+#     local_lm = Ollama(model="qwen3", base_url="http://10.28.6.59:11434", request_timeout=90.0)
+#     return await local_lm.acomplete(query) #.complete(query).text
 
 def complete(query: str):
     rst = Settings.llm.complete(prompt=query)
