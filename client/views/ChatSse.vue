@@ -15,10 +15,10 @@
           <!-- Edit button -->
           <span class="edit-icon" @click.stop="toggleEditMode(session)">
             <svg v-if="editingSessionId === session.sessionId" viewBox="0 0 24 24" width="16" height="16">
-              <path :d="mdilCheck" fill="currentColor"/>
+              <path :d="mdiCheckBold" fill="currentColor"/>
             </svg>
             <svg v-else viewBox="0 0 24 24" width="16" height="16">
-              <path :d="mdilPencil" fill="currentColor"/>
+              <path :d="mdiPencil" fill="currentColor"/>
             </svg>
           </span>
 
@@ -48,12 +48,12 @@
       <div class="chat-tools">
         <button title="联网检索" @click="toggleWebSearch" :class="{ 'active': enableWebSearch }">
           <svg viewBox="0 0 24 24" width="24" height="24">
-            <path :d="mdilBluetooth" fill="currentColor"/>
+            <path :d="mdiWeb" fill="currentColor"/>
           </svg>
         </button>
         <button title="知识库" @click="toggleKbSearch"  :class="{ 'active': enableKbSearch }">
           <svg viewBox="0 0 24 24" width="24" height="24">
-            <path :d="mdilBook" fill="currentColor"/>
+            <path :d="mdiBookOpenBlankVariantOutline" fill="currentColor"/>
           </svg>
         </button>
       </div>
@@ -68,12 +68,8 @@
 </template>
 
 <script setup>
-  import {
-    mdilPencil,
-    mdilCheck,
-    mdilBluetooth,    // 新增
-    mdilBook,    // 新增
-  } from "@mdi/light-js";
+
+  import { mdiWeb, mdiCheckBold, mdiPencil, mdiBookOpenBlankVariantOutline } from '@mdi/js'
 
   import {nextTick, ref, onMounted, watch } from 'vue';
   import { loadTheme, themeState } from '../helpers.js';

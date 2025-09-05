@@ -37,13 +37,13 @@
         />
         <label for="remember-me">Remember Me</label>
       </div>
-      <CustomButton :iconPath="mdilLogin" label="Log In" />
+      <CustomButton :iconPath="mdiLoginVariant" label="Log In" />
     </form>
   </div>
 </template>
 
 <script setup>
-import { mdilLogin } from "@mdi/light-js";
+import { mdiLoginVariant } from "@mdi/js";
 import { useToast } from "primevue/usetoast";
 import { ref, watch } from "vue";
 import { useRouter } from "vue-router";

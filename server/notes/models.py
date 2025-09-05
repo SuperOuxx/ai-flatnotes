@@ -18,6 +18,7 @@ class NoteCreate(CustomBaseModel):
         AfterValidator(is_valid_filename),
     ]
     content: Optional[str] = Field(None)
+    space_type: Optional[str] = Field(None)
 
 
 class Note(CustomBaseModel):

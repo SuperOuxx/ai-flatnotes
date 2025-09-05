@@ -5,7 +5,7 @@
       class="flex w-full rounded-md border border-theme-border bg-theme-background dark:bg-theme-background-elevated"
       :class="{ 'px-3 py-2': !large, 'px-5 py-4': large }"
     >
-      <IconLabel :iconPath="mdilMagnify" class="mr-2" />
+      <IconLabel :iconPath="mdiMagnify" class="mr-2" />
       <input
         type="text"
         ref="input"
@@ -44,7 +44,7 @@
 </template>
 
 <script setup>
-import { mdilMagnify } from "@mdi/light-js";
+import { mdiMagnify } from "@mdi/js";
 import { useToast } from "primevue/usetoast";
 import { ref, watch } from "vue";
 // import { useRouter } from "vue-router";

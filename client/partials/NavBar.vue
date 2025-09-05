@@ -6,12 +6,12 @@
     <div class="flex grow items-start justify-end">
       <!-- New Note -->
       <RouterLink v-if="showNewButton" :to="{ name: 'new' }">
-        <CustomButton :iconPath="mdilPlusCircle" label="New Note" />
+        <CustomButton :iconPath="mdiPlusCircle" label="New Note" />
       </RouterLink>
       <!-- Menu -->
       <CustomButton
         class="ml-1"
-        :iconPath="mdilMenu"
+        :iconPath="mdiMenu"
         label="Menu"
         @click="toggleMenu"
       />
@@ -22,15 +22,15 @@
 
 <script setup>
 import {
-  mdilLogout,
-  mdilMagnify,
-  mdilMenu,
-  mdilMonitor,
-  mdilNoteMultiple,
-  mdilPlusCircle,
-  mdilMessageProcessing,
-  mdilBookPlus,
-} from "@mdi/light-js";
+  mdiLogout,
+  mdiMagnify,
+  mdiMenu,
+  mdiMonitor,
+  mdiNoteMultiple,
+  mdiPlusCircle,
+  mdiMessageProcessing,
+  mdiBookPlus,
+} from "@mdi/js";
 import { computed, ref } from "vue";
 import { RouterLink, useRouter } from "vue-router";
 
@@ -55,13 +55,13 @@ const emit = defineEmits(["toggleSearchModal"]);
 const menuItems = [
   {
     label: "Search",
-    icon: mdilMagnify,
+    icon: mdiMagnify,
     command: () => emit("toggleSearchModal"),
     keyboardShortcut: "/",
   },
   {
     label: "All Notes",
-    icon: mdilNoteMultiple,
+    icon: mdiNoteMultiple,
     command: () =>
       router.push({
         name: "search",
@@ -73,7 +73,7 @@ const menuItems = [
   },
   {
     label: "Chat",
-    icon: mdilMessageProcessing,
+    icon: mdiMessageProcessing,
     command: () =>
       router.push({
         name: "chat",
@@ -81,7 +81,7 @@ const menuItems = [
   },
   {
     label: "Workspace",
-    icon: mdilBookPlus,
+    icon: mdiBookPlus,
     command: () =>
       router.push({
         name: "workspace",
@@ -89,7 +89,7 @@ const menuItems = [
   },
   {
     label: "Knowledge",
-    icon: mdilBookPlus,
+    icon: mdiBookPlus,
     command: () =>
       router.push({
         name: "knowledge",
@@ -97,7 +97,7 @@ const menuItems = [
   },
   {
     label: "Toggle Theme",
-    icon: mdilMonitor,
+    icon: mdiMonitor,
     command: toggleTheme,
   },
   {
@@ -106,7 +106,7 @@ const menuItems = [
   },
   {
     label: "Log Out",
-    icon: mdilLogout,
+    icon: mdiLogout,
     command: logOut,
     visible: showLogOutButton,
   },

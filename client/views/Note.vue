@@ -58,14 +58,14 @@
         <CustomButton
           v-show="canModify && !isNewNote"
           label="Delete"
-          :iconPath="mdilDelete"
+          :iconPath="mdiDelete"
           @click="deleteHandler"
         />
         <!-- Save Button -->
         <CustomButton
           v-show="editMode"
           label="Save"
-          :iconPath="mdilContentSave"
+          :iconPath="mdiContentSave"
           @click="saveHandler((close = false))"
           class="relative ml-1"
         >
@@ -120,7 +120,7 @@
 
 <script setup>
 import { mdiNoteOffOutline } from "@mdi/js";
-import { mdilContentSave, mdilDelete } from "@mdi/light-js";
+import { mdiContentSave, mdiDelete } from "@mdi/js";
 import Mousetrap from "mousetrap";
 import { useToast } from "primevue/usetoast";
 import { computed, nextTick, onMounted, ref, watch } from "vue";

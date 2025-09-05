@@ -125,7 +125,7 @@ if global_config.auth_type != AuthType.READ_ONLY:
     def post_note(note: NoteCreate):
         """Create a new note."""
         try:
-            return note_storage.create(note)
+            return kb_storage_dict[note.space_type].create(note)
             # return kb_storage_dict[spaceType].create(note)
         except ValueError:
             raise HTTPException(
