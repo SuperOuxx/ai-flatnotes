@@ -22,6 +22,7 @@ sentence-transformers[onnx]
 
 FlagEmbedding
 
+psycopg[binary]
 # langextract==1.0.8
 
 

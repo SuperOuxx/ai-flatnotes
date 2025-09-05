@@ -23,13 +23,20 @@
       <!-- Search Results -->
       <div
         v-for="result in results"
+        :key="result.title"
         class="mb-4 cursor-pointer rounded px-2 py-1 hover:bg-theme-background-elevated"
+        :class="{ 'selected-note': result.title === selectedNoteTitle }"
         @click="handleNoteClick(result.title)"
       >
         <!-- Title and Tags -->
         <div>
-        <span v-html="result.titleHighlightsOrTitle" class="mr-2"></span>
-        <Tag v-for="tag in result.tagMatches" :tag="tag" class="mr-1" />
+          <!-- 添加高亮效果 -->
+          <span 
+            v-html="result.titleHighlightsOrTitle" 
+            :class="{ 'text-theme-brand font-semibold': result.title === selectedNoteTitle }"
+            class="mr-2"
+          ></span>
+          <Tag v-for="tag in result.tagMatches" :tag="tag" class="mr-1" />
         </div>
         <!-- Last Modified and Content Highlights -->
         <div>
@@ -74,6 +81,7 @@ const props = defineProps({
     type: Number,
     default: searchSortOptions.score,
   },
+  selectedNoteTitle: String
 });
 
 const loadingIndicator = ref();
@@ -177,5 +185,18 @@ function handleNoteClick(title) {
 <style>
 .match {
   @apply text-theme-brand;
+}
+</style>
+
+<style scoped>
+/* 添加选中项的整体背景高亮 */
+.selected-note {
+  background-color: var(--theme-highlight-bg);
+  border-left: 3px solid var(--theme-brand);
+}
+
+/* 暗黑模式适配 */
+.dark .selected-note {
+  background-color: var(--theme-highlight-bg-dark);
 }
 </style>

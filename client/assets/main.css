@@ -1,1 +1,6 @@
 @import './base.css';
+
+:root {
+  --theme-highlight-bg: #e6f7ff; /* 亮色模式高亮背景 */
+  --theme-highlight-bg-dark: #003a8c; /* 暗色模式高亮背景 */
+}

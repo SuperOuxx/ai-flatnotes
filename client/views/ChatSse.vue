@@ -7,7 +7,9 @@
         <button type="primary" style="float: right" @click="openNewSession">+ 新会话</button>
       </div>
       <ul>
-        <li v-for="session in sessions" :key="session.sessionId" @click="selectSession(session)" :title="session.sessionName">
+        <li v-for="session in sessions" :key="session.sessionId" @click="selectSession(session)" :title="session.sessionName"
+          :class="{ 'selected-session': session.sessionId === currentSession?.sessionId }"
+        >
           <span class="session-name">{{ session.sessionName }}</span>
 
           <!-- Edit button -->
@@ -431,6 +433,18 @@
 </script>
 
 <style scoped lang="scss">
+
+/* 添加选中会话的高亮样式 */
+li.selected-session {
+  background-color: var(--theme-highlight-bg);
+  border-left: 3px solid var(--theme-brand);
+
+  .session-name {
+    color: var(--text-theme-brand);
+    font-weight: bold;
+  }
+}
+
 .chat-container {
   display: flex;
   height: 100vh;
@@ -588,6 +602,10 @@ li {
       position: relative;
       display: flex;
       align-items: center;
+      transition: background-color 0.2s; /* 添加过渡效果 */
+
+      /* 添加这个样式确保高亮边框可见 */
+      border-left: 3px solid transparent;
 
       // Container for the session name
       .session-name {
@@ -759,6 +777,16 @@ li {
 
 // Dark 模式
 /* 暗黑模式样式 */
+
+.dark li.selected-session {
+  background-color: var(--theme-highlight-bg-dark);
+  border-left-color: var(--theme-brand-dark);
+
+  .session-name {
+    color: var(--text-theme-brand-dark); /* 暗黑模式下的品牌色 */
+  }
+}
+
 .chat-container.dark {
   background-color: #1e1e1e;
   color: #e0e0e0;

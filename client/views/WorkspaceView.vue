@@ -18,6 +18,7 @@
         :searchTerm="searchTerm" 
         :spaceType="spaceType"
         :sortBy="sortBy"
+        :selectedNoteTitle="selectedNoteTitle"
         @note-selected="handleNoteSelected"
         @search="handleSearch"
       />
