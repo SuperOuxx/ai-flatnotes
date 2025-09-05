@@ -22,6 +22,16 @@
             <path :d="mdiPlusBox" fill="currentColor"/>
           </svg>
         </button>
+
+        <!-- 上传按钮 -->
+        <button 
+          @click="triggerFileUpload"
+          class="flex items-center justify-center p-2 text-white bg-theme-brand rounded hover:bg-theme-brand-hover ml-2"
+        >
+          <svg class="w-5 h-5" viewBox="0 0 24 24">
+            <path :d="mdiUploadBox" fill="currentColor"/>
+          </svg>
+        </button>
       </div>
 
       
@@ -30,6 +40,7 @@
       </div>
       
       <SearchResults 
+        ref="searchResults"
         :searchTerm="searchTerm" 
         :spaceType="spaceType"
         :sortBy="sortBy"
@@ -51,14 +62,28 @@
         Select a note from the sidebar
       </div>
     </div>
+
+    <!-- 隐藏的文件上传输入 -->
+    <input 
+      type="file" 
+      ref="fileInput" 
+      @change="handleFileUpload" 
+      accept=".md" 
+      multiple
+      style="display: none"
+    >
   </div>
 </template>
 
 <script setup>
-import { ref, provide, onMounted } from 'vue';
+import { ref, provide, onMounted, nextTick } from 'vue';
+import { mdiPlusBox, mdiUploadBox } from '@mdi/js';
+import { useToast } from 'primevue/usetoast';
+import { getToastOptions } from '../helpers.js';
+import { createNote } from '../api.js';
 import SearchResults from './SearchResults.vue';
 import Note from './Note.vue';
-import { mdiPlusBox } from '@mdi/js';
+
 
 const emit = defineEmits(['search']);
 
@@ -69,6 +94,10 @@ const selectedNoteTitle = ref(null);
 
 const showNoteEditor = ref(false); // 控制编辑器显示
 const noteKey = ref(0); // 用于强制重新创建 Note 组件
+
+const fileInput = ref(null);
+const searchResults = ref(null); // 引用SearchResults组件
+const toast = useToast();
 
 onMounted(() => {
   const storedType = localStorage.getItem('spaceType');
@@ -93,6 +122,93 @@ function saveSpaceType() {
 
   // Trigger search with empty term to refresh the list
   handleSearch('');
+}
+
+// 触发文件上传
+function triggerFileUpload() {
+  fileInput.value.click();
+}
+
+// 处理文件上传
+async function handleFileUpload(event) {
+  const files = Array.from(event.target.files);
+  if (files.length === 0) return;
+
+  // 只处理Markdown文件
+  const mdFiles = files.filter(file => file.name.endsWith('.md'));
+  if (mdFiles.length === 0) {
+    toast.add(
+      getToastOptions(
+        "请选择Markdown文件（.md）",
+        "无效文件类型",
+        "error"
+      )
+    );
+    return;
+  }
+
+  try {
+    // 处理每个文件
+    for (const file of mdFiles) {
+      const content = await readFileAsText(file);
+      const title = file.name.replace(/\.md$/i, '');
+
+      // 创建新笔记
+      await createNote(title, content, spaceType.value);
+    }
+
+    // 刷新文件列表
+    // refreshFileList();
+    if (searchResults.value) {
+      searchResults.value.refresh();
+    }
+
+    // 如果只上传一个文件，自动选中它
+    if (mdFiles.length === 1) {
+      const title = mdFiles[0].name.replace(/\.md$/i, '');
+      selectedNoteTitle.value = title;
+      showNoteEditor.value = true;
+      noteKey.value++;
+
+      toast.add(
+        getToastOptions(
+          `文件 "${mdFiles[0].name}" 已成功上传并选中`,
+          "上传成功",
+          "success"
+        )
+      );
+    } else {
+      toast.add(
+        getToastOptions(
+          `${mdFiles.length} 个文件已成功上传`,
+          "批量上传成功",
+          "success"
+        )
+      );
+    }
+  } catch (error) {
+    console.error('文件上传失败:', error);
+    toast.add(
+      getToastOptions(
+        "文件上传失败: " + (error.response?.data?.detail || error.message),
+        "错误",
+        "error"
+      )
+    );
+  } finally {
+    // 重置input以允许重复上传
+    event.target.value = null;
+  }
+}
+
+// 读取文件内容为文本
+function readFileAsText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => resolve(e.target.result);
+    reader.onerror = (e) => reject(e);
+    reader.readAsText(file, 'UTF-8');
+  });
 }
 
 // Provide state to child components

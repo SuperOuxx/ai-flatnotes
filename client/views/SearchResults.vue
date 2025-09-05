@@ -99,7 +99,14 @@ const sortByName = computed(() => {
   return sortOptionNames[props.sortBy];
 });
 
-function init() {
+// 暴露刷新方法给父组件
+defineExpose({
+  refresh() {
+    performSearch();
+  }
+});
+
+function performSearch() {
   loadingIndicator.value.setLoading();
   // Map numeric sort to string value
   // const sortString = sortMapping[props.sortBy] || 'score';
@@ -170,11 +177,10 @@ function toggleSortMenu(event) {
   sortMenu.value.toggle(event);
 }
 
-watch(() => props.searchTerm, init);
+watch(() => props.searchTerm, performSearch);
 watch(() => props.sortBy, reSortResults);
-// 2. 添加 spaceType 的 watch
-watch(() => props.spaceType, init);
-onMounted(init);
+watch(() => props.spaceType, performSearch);
+onMounted(performSearch);
 
 function handleNoteClick(title) {
   emit('note-selected', title);
