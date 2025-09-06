@@ -88,14 +88,6 @@ const menuItems = [
       }),
   },
   {
-    label: "Knowledge",
-    icon: mdiBookPlus,
-    command: () =>
-      router.push({
-        name: "knowledge",
-      }),
-  },
-  {
     label: "Toggle Theme",
     icon: mdiMonitor,
     command: toggleTheme,

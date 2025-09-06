@@ -46,11 +46,6 @@ const router = createRouter({
       path: '/workspace',
       name: 'workspace',
       component: () => import('./views/WorkspaceView.vue')
-    },
-    {
-      path: "/knowledge",
-      name: "knowledge",
-      component: () => import("./views/Knowledge.vue"),
     }
   ],
 });
