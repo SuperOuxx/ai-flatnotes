@@ -1,3 +1,12 @@
+<!-- 
+目前workspace是集合了笔记和知识库，请在下拉框增加一项"对话"，选择"对话"时，布局与"笔记"或"知识库"的一样，只是"笔记"或"知识库"左侧边栏是展示文件列表的，"对话"的要展示session列表，右侧是聊天窗口（chat-window），复用ChatSse.vue 
+以下修改方案是否可行：
+
+下拉框增加“对话”选项。
+左侧边栏在spaceType为chat时隐藏。
+右侧内容区域在spaceType为chat时宽度变为100%，并显示ChatSse视图。
+调整saveSpaceType方法，处理切换到chat的情况。 -->
+
 <template>
   <div class="flex h-full">
     <!-- Left Sidebar (25%) -->
