@@ -192,6 +192,17 @@ class Chat():
         summarize = extract_keywords(ai_resp.split("</think>", 1)[-1].strip())
         self.update_session_summarize(session_id, summarize)
 
+    def search_sessions(self, term: str):
+        """Search sessions by title using PostgreSQL ILIKE for case-insensitive fuzzy matching"""
+        
+        from sqlalchemy import and_
+        # Use SQLAlchemy ORM for PostgreSQL ILIKE query
+        return self.db.filter(
+            ChatSession,
+            ChatSession.user_id == self.user_id,
+            ChatSession.title.ilike(f'%{term}%')
+        )
+
 
 
 # if __name__ == "__main__":

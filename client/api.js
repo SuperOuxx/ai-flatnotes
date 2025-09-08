@@ -191,3 +191,9 @@ export function  getSessions() {
 export function updateSessionTitle(sessionId, title) {
   return api.post(`/api/chat/ai/sessions/${sessionId}`, { title })
 }
+
+export function searchSessions(term) {
+  return api.get("/api/chat/ai/sessions/search", {
+    params: { term }
+  });
+}

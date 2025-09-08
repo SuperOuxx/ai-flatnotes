@@ -198,7 +198,14 @@ def search(
         sort = "last_modified"
     return kb_storage_dict[spaceType].search(term, sort=sort, order=order, limit=limit)
 
-
+@app.get(
+    "/api/chat/ai/sessions/search",
+)
+async def search_sessions(term: str):
+    """Search sessions by title."""
+    chat = await get_chat()
+    sessions = chat.search_sessions(term)
+    return [{"id": s.id, "title": s.title} for s in sessions]
 
 
 @app.get(

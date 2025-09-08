@@ -187,6 +187,10 @@ class DbUtils:
         with Session(self._engine) as session:
             return session.query(model_class).filter_by(**kwargs).all()
         
+    def filter(self, model_class, *criterion):
+        with Session(self._engine) as session:
+            return session.query(model_class).filter(*criterion).order_by(model_class.updated_at.desc()).all()
+        
     
     # @classmethod
     def get_sorted(self, model_class: Base, **kwargs):

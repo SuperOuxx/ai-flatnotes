@@ -95,6 +95,7 @@
     getMessages,
     getSessions,
     updateSessionTitle,
+    searchSessions,
   } from "../api.js";
 
   import { marked } from 'marked';
@@ -118,6 +119,8 @@
   };
 
   const isDarkTheme = themeState; //ref(false);
+
+  const searchKeyword = ref('');
 
   // Add this watcher to sync theme changes
   watch(() => document.body.classList.contains('dark'), (isDark) => {
@@ -357,7 +360,16 @@
     }
 
     try {
-      const res = await getSessions(); // 调用后端接口获取会话列表
+      loadSessions(isFirstLoad)
+
+      // isInitializing = false;
+    } catch (error) {
+      console.error("获取会话列表失败:", error);
+    }
+  };
+
+  const loadSessions = async (isFirstLoad) => {
+    const res = await getSessions(); // 调用后端接口获取会话列表
       sessions.value = res.data.map(session => ({
         sessionId: session.id,
         sessionName: session.title
@@ -367,12 +379,7 @@
         currentSession.value = sessions.value[0];
         loadMessages();
       }
-
-      // isInitializing = false;
-    } catch (error) {
-      console.error("获取会话列表失败:", error);
-    }
-};
+  }
   // 初始化会话列表
   init(true)
 
@@ -416,6 +423,32 @@
       chatMessages.value.scrollTop = chatMessages.value.scrollHeight;
     }
   };
+
+  const performSearch = async () => {
+    if (!searchKeyword.value.trim()) {
+      // 当搜索为空时，重新加载所有会话
+      await loadSessions(false); // 确保调用 init(false) 刷新列表
+      return;
+    }
+
+    try {
+      const res = await searchSessions(searchKeyword.value);
+      sessions.value = res.data.map(session => ({
+        sessionId: session.id,
+        sessionName: session.title
+      }));
+    } catch (error) {
+      console.error("搜索会话失败:", error);
+    }
+  };
+
+  // Add this to watch for searchKeyword changes
+  watch(searchKeyword, (newVal) => {
+    if (!newVal) {
+      // When search is cleared, reload all sessions
+      init(false);
+    }
+  });
 </script>
 
 <style scoped lang="scss">
