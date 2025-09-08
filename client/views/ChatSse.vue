@@ -1,13 +1,31 @@
 <template>
-  <div class="chat-container"  :class="{ 'dark': isDarkTheme }">
+  <div class="chat-container flex h-full"  :class="{ 'dark': isDarkTheme }">
     <!-- 左侧聊天会话列表 -->
-    <div class="chat-sessions">
-      <div class="chat-header">
-        AI聊天机器人
-        <button type="primary" style="float: right" @click="openNewSession">+ 新会话</button>
+    <div class="chat-sessions w-1/4 border-r border-theme-border overflow-auto">
+      <div class="chat-header flex items-center p-2 border-b border-theme-border">
+        <input 
+            v-model="searchKeyword"
+            type="text" 
+            placeholder="搜索会话..." 
+            class="search-input"
+            @keyup.enter="performSearch"
+          />
+        <!-- <button type="primary" style="float: right" @click="openNewSession">+ 新会话</button> -->
+        <button 
+          @click="openNewSession"
+          class="flex items-center justify-center p-2 text-white bg-theme-brand rounded hover:bg-theme-brand-hover"
+        >
+          <svg class="w-5 h-5" viewBox="0 0 24 24">
+            <path :d="mdiPlusBox" fill="currentColor"/>
+          </svg>
+        </button>
       </div>
       <ul>
-        <li v-for="session in sessions" :key="session.sessionId" @click="selectSession(session)" :title="session.sessionName"
+        <li 
+          v-for="session in sessions" 
+          :key="session.sessionId" 
+          @click="selectSession(session)" 
+          :title="session.sessionName"
           :class="{ 'selected-session': session.sessionId === currentSession?.sessionId }"
         >
           <span class="session-name">{{ session.sessionName }}</span>
@@ -69,7 +87,7 @@
 
 <script setup>
 
-  import { mdiWeb, mdiCheckBold, mdiPencil, mdiBookOpenBlankVariantOutline } from '@mdi/js'
+  import { mdiWeb, mdiCheckBold, mdiPencil, mdiBookOpenBlankVariantOutline, mdiPlusBox } from '@mdi/js'
 
   import {nextTick, ref, onMounted, watch } from 'vue';
   import { loadTheme, themeState } from '../helpers.js';
@@ -325,26 +343,6 @@
     });
   };
 
-  /**
-   * 初始化会话列表
-   * @param init 是否初次加载
-   */
-  // const init = (init) => {
-  //   let userId = localStorage.getItem('USER_ID');
-  //   // 设置一个默认的用户ID，并存储到缓存
-  //   if (!userId) {
-  //     userId = String(new Date().getTime());
-  //     localStorage.setItem('USER_ID', userId);
-  //   }
-  //   // getSession(userId).then(res => {
-  //   //   sessions.value = res.data;
-  //   //   currentSession.value = sessions?.value[0];
-  //   //   if (sessions.value.length > 0 && init) {
-  //   //     // 查询当前会话聊天记录
-  //   //     loadMessages();
-  //   //   }
-  //   // });
-  // };
 
   let isInitializing = false;
 
@@ -417,14 +415,6 @@
     if (chatMessages.value && !isUserScrolledUp.value) {
       chatMessages.value.scrollTop = chatMessages.value.scrollHeight;
     }
-    // if (chatMessages.value) {
-    //   const lastMessage = chatMessages.value?.children[chatMessages.value.children.length - 1];
-    //   if (lastMessage) {
-    //     lastMessage.scrollIntoView({behavior: 'smooth', block: 'end'});
-    //   }
-    // } else {
-    //   console.error('聊天框不可用');
-    // }
   };
 </script>
 
@@ -447,76 +437,6 @@ li.selected-session {
   padding: 0;
   overflow: hidden; /* 添加这行防止外层滚动条 */
 }
-
-// .chat-sessions {
-//   width: 25%;
-//   background-color: #f4f4f4;
-//   padding: 10px;
-
-//   .chat-header {
-//     text-align: center;
-//     line-height: 30px;
-//     width: 100%;
-//   }
-
-//   ul {
-//     list-style-type: none;
-//     padding: 0;
-
-//     li {
-//       padding: 10px;
-//       cursor: pointer;
-
-//       &:hover {
-//         background-color: #ddd;
-//       }
-//     }
-//   }
-// }
-
-// li {
-//   position: relative;
-//   display: flex;
-//   align-items: center;
-//   padding: 10px 30px 10px 10px; // Extra right padding for icon
-
-//   .edit-icon {
-//     position: absolute;
-//     right: 5px;
-//     top: 50%;
-//     transform: translateY(-50%);
-//     cursor: pointer;
-//     opacity: 0.5;
-//     transition: opacity 0.2s;
-//     font-size: 14px;
-//     width: 20px;
-//     height: 20px;
-//     display: flex;
-//     align-items: center;
-//     justify-content: center;
-    
-//     &:hover {
-//       opacity: 1;
-//       background: rgba(0,0,0,0.1);
-//       border-radius: 3px;
-//     }
-//   }
-  
-//   .title-edit-input {
-//     position: absolute;
-//     top: 0;
-//     left: 0;
-//     width: calc(100% - 30px);
-//     height: 100%;
-//     border: 1px solid #007bff;
-//     border-radius: 4px;
-//     padding: 0 8px;
-//     font-size: inherit;
-//     background: white;
-//     box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
-//     z-index: 10;
-//   }
-// }
 
 li {
   position: relative;
