@@ -68,8 +68,8 @@ class RedditMcp(BaseMcp):
         self.mcp_client = BasicMCPClient(command_or_url="python", 
                                 args=["-m", "mcp_server_reddit"],
                                 env={
-                                    "REDDIT_CLIENT_ID": "IPu1dYXYQdlz-204dlXUWw",
-                                    "REDDIT_CLIENT_SECRET": "UP--5zLOSiAsb4DrW1IRnsnh6NDKSQ"
+                                    "REDDIT_CLIENT_ID": os.environ.get("REDDIT_CLIENT_ID"),
+                                    "REDDIT_CLIENT_SECRET": os.environ.get("REDDIT_CLIENT_SECRET")
                                     }
                                 )
 
@@ -91,7 +91,9 @@ import os
 async def main():
     API_KEY = os.environ.get("OPENAI_API_KEY")
     
-    local_llm = OpenAILike(
+    API_BASE = os.environ.get("OPENAI_API_BASE")
+
+    llm = OpenAILike(
         model="llamaCpp",
         api_base="http://localhost:18080/v1",
         api_key=API_KEY,
@@ -100,15 +102,14 @@ async def main():
         is_function_calling_model=True,
     )
     user_input = """
-        用我的 Reddit 权限，围绕【教育培训（教培）主题】抓热点与吐槽；
-        按“谁、在什么场景、要什么结果”做聚类；
-        输出 10 条选题卡片（含链接与原话），并给每条一个 0–20 的总分；
-        最后只保留 ≥14 分的，生成标题（3 种风格）和 7 天验证计划。
+        用我的 Reddit 权限，从 r/education 抓热点与吐槽；
+        按“谁、在什么场景、要什么结果”做聚类。
     """
-    mcp = RedditMcp(local_llm)
+    mcp = RedditMcp(llm)
     response = await mcp.handle_query(user_input)
     print("Agent: ", str(response))
 
 if __name__ == "__main__":
-    main()
+    import asyncio
+    asyncio.run(main())
     
