@@ -12,6 +12,7 @@ llama-index-embeddings-huggingface
 # llama-index-llms-llama-cpp
 llama-index-llms-openai-like
 llama-index-storage-chat-store-postgres
+llama-index-tools-mcp
 # llama-index-vector-stores-postgres
 # llama-index-storage-docstore-postgres
 # llama-index-vector-stores-elasticsearch
@@ -28,4 +29,5 @@ psycopg[binary]
 
 # llama-cpp-python==0.3.16
 
-# websockets
+# MCP
+mcp-server-reddit

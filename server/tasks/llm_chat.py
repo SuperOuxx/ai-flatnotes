@@ -1,11 +1,15 @@
+from typing import List
 from llama_index.llms.openai_like import OpenAILike
 from llama_index.core.base.llms.types import ChatMessage, MessageRole, CompletionResponse
+from llama_index.core.agent.workflow import FunctionAgent
+from llama_index.core.tools.function_tool import FunctionTool
 from llama_index.core import Settings
 import os
 import requests
 import json
 
 from rag.hybrid_search import HybridSearch
+from mcp.fetch_reddit import RedditMcp
 from utils.extract_words import choose_longest_word, extract_all_words
 from tasks.chat_store import ChatStore
 # from chat_store import ChatStore
@@ -23,6 +27,15 @@ Settings.llm = OpenAILike(
 )
 
 rag = HybridSearch()
+
+local_llm = OpenAILike(
+    model="llamaCpp",
+    api_base="http://localhost:18080/v1",
+    api_key=API_KEY,
+    # context_window=128000,
+    is_chat_model=True,
+    is_function_calling_model=True,
+)
 
 
 def convert_1d_to_2d(lst, extract_field=None, step=2):  
@@ -161,10 +174,15 @@ class Chat():
         if len(msg_list) > 10:
             msg_list = msg_list[-10: ]
 
+        summarize_keywords = self.get_session_summarize(session_id=session_id)
+        if summarize_keywords:
+            msg_list.append(ChatMessage(role="user", content=f"[聊天记录关键词]: {summarize_keywords}"))
+
+        mcp = RedditMcp(local_llm)
+        response_obj = await mcp.handle_query(query)
+        print(response_obj)
+
         if need_kb or need_web:
-            summarize_keywords = self.get_session_summarize(session_id=session_id)
-            if summarize_keywords:
-                msg_list.append(ChatMessage(role="user", content=f"[聊天记录关键词]: {summarize_keywords}"))
             response_obj = await rag.aquery(original_query=query, hist_list=msg_list, need_web=need_web, need_kb=need_kb)
             async for chunk in response_obj:
                 yield chunk.delta
