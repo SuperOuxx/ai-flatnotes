@@ -9,8 +9,8 @@ from llama_index.core.base.llms.base import BaseLLM
 #         "command": "uvx",
 #         "args": ["--from", "git+https://github.com/adhikasp/mcp-reddit.git", "mcp-reddit"],
 #         "env": {
-#           "REDDIT_CLIENT_ID": "IPu1dYXYQdlz-204dlXUWw",
-#           "REDDIT_CLIENT_SECRET": "UP--5zLOSiAsb4DrW1IRnsnh6NDKSQ"
+#           "REDDIT_CLIENT_ID": "",
+#           "REDDIT_CLIENT_SECRET": ""
 #         }
 #       }
 # or 下面这个tool更多
@@ -65,12 +65,12 @@ class RedditMcp(BaseMcp):
         super().__init__()
 
 
-        self.mcp_client = BasicMCPClient(command_or_url="python", 
-                                args=["-m", "mcp_server_reddit"],
-                                env={
-                                    "REDDIT_CLIENT_ID": os.environ.get("REDDIT_CLIENT_ID"),
-                                    "REDDIT_CLIENT_SECRET": os.environ.get("REDDIT_CLIENT_SECRET")
-                                    }
+        self.mcp_client = BasicMCPClient(command_or_url="http://localhost:3000/sse", 
+                                # args=["--from", "git+https://github.com/adhikasp/mcp-reddit.git", "mcp-reddit"],
+                                # env={
+                                #     "REDDIT_CLIENT_ID": os.environ.get("REDDIT_CLIENT_ID"),
+                                #     "REDDIT_CLIENT_SECRET": os.environ.get("REDDIT_CLIENT_SECRET")
+                                #     }
                                 )
 
         self.tool_spec = McpToolSpec(
@@ -85,27 +85,61 @@ class RedditMcp(BaseMcp):
 
         self.agent = None
 
+
+class AShareMcp(BaseMcp):
+    SYSTEM_PROMPT = """\
+    You are an AI assistant for Tool Calling.
+
+    Before you help a user, you need to work with tools to interact with Our Database
+    """
+
+    AGENT_NAME = "AShareMCPServer"
+    AGENT_DESC = "A-Share MCP Server"
+
+    def __init__(self, llm: BaseLLM):
+        super().__init__()
+
+
+        self.mcp_client = BasicMCPClient(command_or_url="http://localhost:3000/sse", 
+                                # args=["--from", "git+https://github.com/adhikasp/mcp-reddit.git", "mcp-reddit"],
+                                # env={
+                                #     "REDDIT_CLIENT_ID": os.environ.get("REDDIT_CLIENT_ID"),
+                                #     "REDDIT_CLIENT_SECRET": os.environ.get("REDDIT_CLIENT_SECRET")
+                                #     }
+                                )
+
+        self.tool_spec = McpToolSpec(
+            client=self.mcp_client,
+        )
+
+        self.llm: BaseLLM = llm
+
+        self.agent = None
+
 from llama_index.llms.openai_like import OpenAILike
 import os
 
 async def main():
-    API_KEY = os.environ.get("OPENAI_API_KEY")
-    
-    API_BASE = os.environ.get("OPENAI_API_BASE")
+    API_KEY = os.environ.get("SLM_API_KEY")
+    API_BASE = os.environ.get("SLM_API_BASE")
+    MODEL_ID = os.environ.get("SLM_MODEL_ID")
 
     llm = OpenAILike(
-        model="llamaCpp",
-        api_base="http://localhost:18080/v1",
+        model=MODEL_ID,
+        api_base=API_BASE,
         api_key=API_KEY,
         # context_window=128000,
         is_chat_model=True,
         is_function_calling_model=True,
     )
-    user_input = """
-        用我的 Reddit 权限，从 r/education 抓热点与吐槽；
-        按“谁、在什么场景、要什么结果”做聚类。
-    """
-    mcp = RedditMcp(llm)
+    # user_input = """
+    #     用我的 Reddit 权限，从 r/education 抓热点与吐槽；
+    #     按“谁、在什么场景、要什么结果”做聚类。
+    # """
+    # user_input = "what are latest hot thread in r/education"
+    
+    user_input = "分析最近A股大盘，判断目前是否适合进行基金定投"
+    mcp = AShareMcp(llm) # RedditMcp(llm)
     response = await mcp.handle_query(user_input)
     print("Agent: ", str(response))
 
